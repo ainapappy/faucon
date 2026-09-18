@@ -174,12 +174,12 @@ contrôlé par des Policies.
 | Auth | Fortify (login, 2FA TOTP, passkeys) · Sanctum |
 | Frontend | Vue 3.5 · Inertia v3 · TypeScript · Tailwind CSS v4 · shadcn-vue (reka-ui, lucide) |
 | Build & routing | Vite 8 · Wayfinder (routes typées générées) |
-| Données | **MySQL / MariaDB par défaut** (SQLite et PostgreSQL possibles) · queue `database` |
+| Données | **MariaDB / MySQL par défaut** (SQLite et PostgreSQL possibles) · queue `database` |
 | Qualité | Pest 5 · PHPStan (Larastan) · Pint · Vitest |
 
 ## 🚀 Démarrage rapide
 
-Prérequis : **PHP 8.4**, **Composer**, **Node.js 22+**, **MySQL ou MariaDB**.
+Prérequis : **PHP 8.4**, **Composer**, **Node.js 22+**, **MariaDB ou MySQL**.
 
 ```bash
 # après clonage du dépôt

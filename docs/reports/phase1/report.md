@@ -24,7 +24,7 @@ Audit complet du squelette existant (Laravel 13.32 / PHP 8.4.4 / Inertia v3 / Fo
 ### Database Changes
 
 - Une migration : colonnes 2FA sur `users` (ci-dessus), appliquée en dev (batch 2).
-- État DB : **le `.env` a été basculé vers MySQL** (`DB_CONNECTION=mysql`, base `faucon@127.0.0.1:3306`) pendant la session d'audit — modification externe conservée. **Décision officialisée à l'issue de la phase (2026-09-18) : MySQL/MariaDB est le moteur de dev par défaut** — `.env.example` aligné (variants `mariadb` natif et `sqlite` documentés en commentaire), défaut `faucon` harmonisé sur les blocs `mysql` et `mariadb` de `config/database.php`. Les tests restent sur sqlite `:memory:` (phpunit.xml, isolés et sans serveur). Le schéma est portable (migrations standard Blueprint).
+- État DB : **le `.env` a été basculé vers MySQL** (`DB_CONNECTION=mysql`, base `faucon@127.0.0.1:3306`) pendant la session d'audit — modification externe conservée. **Décision officialisée à l'issue de la phase (2026-09-18) : MariaDB est le moteur de dev par défaut, via le pilote natif `mariadb`** — `.env.example` aligné (variants `mysql` et `sqlite` documentés en commentaire), défaut `faucon` harmonisé sur les blocs `mysql` et `mariadb` de `config/database.php`. Les tests restent sur sqlite `:memory:` (phpunit.xml, isolés et sans serveur). Le schéma est portable (migrations standard Blueprint).
 
 ### Routes
 
