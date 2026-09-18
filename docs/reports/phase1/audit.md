@@ -104,7 +104,7 @@ Correctifs volontairement **hors périmètre** (notés, non appliqués) : activa
 
 | Hypothèse phase1.md | Réalité constatée | Décision |
 |---|---|---|
-| Base MySQL possible | Départ : SQLite partout. En **cours d'audit, `.env` a été basculé vers MySQL** (`DB_CONNECTION=mysql`, base `faucon`) avec une ligne parasite d'outil BDD (`-- Active: …`) insérée avant `<?php` de `config/database.php` — ligne retirée (corrompt la sortie HTTP) ; le défaut `faucon` est conservé. Tests : toujours sqlite `:memory:` | Constat consigné : config DB-compatible multi-moteurs, tests isolés sur sqlite |
+| Base MySQL possible | Départ : SQLite partout. En **cours d'audit, `.env` a été basculé vers MySQL** (`DB_CONNECTION=mysql`, base `faucon`) avec une ligne parasite d'outil BDD (`-- Active: …`) insérée avant `<?php` de `config/database.php` — ligne retirée (corrompt la sortie HTTP) ; le défaut `faucon` est conservé. Tests : toujours sqlite `:memory:`. **Décision officialisée après audit : MySQL/MariaDB par défaut** (`.env.example` aligné, sqlite conservé en option) | Constat consigné : config DB-compatible multi-moteurs, tests isolés sur sqlite |
 | « Vitest (front) » | Aucune spec front ; checks = oxlint + vue-tsc | Constat consigné ; Vitest quand logique front testable |
 | Routes sous préfixe `{current_team}` | Seul `dashboard` est scopé `{current_team}` ; reste sous `settings/` | Constat consigné — l'architecture équipe reste solide |
 | 2FA/passkeys câblés | 2FA non activée (tests skip), passkeys non câblés | Activation reportée phase 2 (consolidation auth) |

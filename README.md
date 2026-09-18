@@ -174,12 +174,12 @@ contrôlé par des Policies.
 | Auth | Fortify (login, 2FA TOTP, passkeys) · Sanctum |
 | Frontend | Vue 3.5 · Inertia v3 · TypeScript · Tailwind CSS v4 · shadcn-vue (reka-ui, lucide) |
 | Build & routing | Vite 8 · Wayfinder (routes typées générées) |
-| Données | SQLite par défaut (MySQL / PostgreSQL compatibles) · queue `database` |
+| Données | **MySQL / MariaDB par défaut** (SQLite et PostgreSQL possibles) · queue `database` |
 | Qualité | Pest 5 · PHPStan (Larastan) · Pint · Vitest |
 
 ## 🚀 Démarrage rapide
 
-Prérequis : **PHP 8.4**, **Composer**, **Node.js 22+**.
+Prérequis : **PHP 8.4**, **Composer**, **Node.js 22+**, **MySQL ou MariaDB**.
 
 ```bash
 # après clonage du dépôt
@@ -187,7 +187,7 @@ composer setup    # dépendances PHP + .env + clé d'app + migrations + npm + bu
 composer dev      # lance l'app, Vite, la queue et le scheduler
 ```
 
-SQLite est configuré par défaut : aucune base de données à installer pour démarrer.
+Créez au préalable la base `faucon` sur votre serveur (`CREATE DATABASE faucon;`). Les identifiants se règlent dans `.env`. SQLite reste disponible : définissez `DB_CONNECTION=sqlite` dans `.env` avant `composer setup` (aucun serveur requis). Les tests tournent toujours sur sqlite `:memory:` — aucune incidence sur votre base.
 
 ## 🧪 Tests & qualité
 
