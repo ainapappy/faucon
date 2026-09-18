@@ -86,7 +86,7 @@ cohérent et committable.
 
 | # | Phase | Contenu | Statut |
 |---|-------|---------|:------:|
-| 1 | Architecture & fondations | Audit du squelette, conventions, scoping équipe, chaîne qualité | ⏳ |
+| 1 | Architecture & fondations | Audit du squelette, conventions, scoping équipe, chaîne qualité | ✅ |
 | 2 | Authentification & utilisateurs | Consolidation Fortify, policies, base d'autorisation | ⏳ |
 | 3 | Workflow Builder | Modèle graphe (nodes / edges), éditeur visuel, catalogue de types | ⏳ |
 | 4 | Workflow Engine | Validation, registre de handlers, variables, traversal, test run | ⏳ |
