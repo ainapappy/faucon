@@ -17,11 +17,15 @@ const splitAuthPages = new Set([
     'auth/VerifyEmail',
 ]);
 
+// Le builder de workflow est plein écran (maquette builder.html), sans shell.
+const fullscreenPages = new Set(['workflows/Edit']);
+
 void createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     layout: (name) => {
         switch (true) {
             case name === 'Welcome':
+            case fullscreenPages.has(name):
                 return null;
             case splitAuthPages.has(name):
                 return AuthSplitLayout;

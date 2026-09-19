@@ -29,8 +29,14 @@ enum TeamRole: string
                 TeamPermission::UpdateTeam,
                 TeamPermission::CreateInvitation,
                 TeamPermission::CancelInvitation,
+                TeamPermission::WorkflowCreate,
+                TeamPermission::WorkflowUpdate,
+                TeamPermission::WorkflowDelete,
             ],
-            self::Member => [],
+            self::Member => [
+                TeamPermission::WorkflowCreate,
+                TeamPermission::WorkflowUpdate,
+            ],
         };
     }
 

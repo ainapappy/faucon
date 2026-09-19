@@ -13,6 +13,10 @@
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
 
+    /* Identifiants techniques, code, cron (miroir de tokens.css) */
+    --font-mono:
+        'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);

@@ -175,6 +175,9 @@ trait HasTeams
             canRemoveMember: $role?->hasPermission(TeamPermission::RemoveMember) ?? false,
             canCreateInvitation: $role?->hasPermission(TeamPermission::CreateInvitation) ?? false,
             canCancelInvitation: $role?->hasPermission(TeamPermission::CancelInvitation) ?? false,
+            canCreateWorkflow: $role?->hasPermission(TeamPermission::WorkflowCreate) ?? false,
+            canUpdateWorkflow: $role?->hasPermission(TeamPermission::WorkflowUpdate) ?? false,
+            canDeleteWorkflow: $role?->hasPermission(TeamPermission::WorkflowDelete) ?? false,
         );
     }
 

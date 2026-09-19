@@ -13,4 +13,8 @@ enum TeamPermission: string
 
     case CreateInvitation = 'invitation:create';
     case CancelInvitation = 'invitation:cancel';
+
+    case WorkflowCreate = 'workflow:create';
+    case WorkflowUpdate = 'workflow:update';
+    case WorkflowDelete = 'workflow:delete';
 }

@@ -1,5 +1,8 @@
 <?php
 
+use App\Enums\TeamRole;
+use App\Models\Team;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -17,6 +20,9 @@ use Tests\TestCase;
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
+
+pest()->extend(TestCase::class)
+    ->in('Unit');
 
 /*
 |--------------------------------------------------------------------------
@@ -44,7 +50,43 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * Create a team with a single member in the given role.
+ *
+ * @return array{User, Team}
+ */
+function teamWithMember(TeamRole $role = TeamRole::Owner): array
 {
-    // ..
+    $team = Team::factory()->create();
+    $user = User::factory()->create();
+
+    $team->members()->attach($user, ['role' => $role->value]);
+
+    return [$user, $team];
+}
+
+/**
+ * Build a workflow graph API payload from concise node/edge tuples.
+ *
+ * @param  array<int, array{key: string, type: string, name?: string, config?: array<string, mixed>, positionX?: int, positionY?: int}>  $nodes
+ * @param  array<int, array{source: string, target: string, handle?: string|null}>  $edges
+ * @return array{nodes: array<int, array{key: string, type: string, name: string, config: array<string, mixed>, positionX: int, positionY: int}>, edges: array<int, array{sourceNodeKey: string, targetNodeKey: string, sourceHandle: string|null}>}
+ */
+function graphPayload(array $nodes = [], array $edges = []): array
+{
+    return [
+        'nodes' => array_values(array_map(fn (array $node): array => [
+            'key' => $node['key'],
+            'type' => $node['type'],
+            'name' => $node['name'] ?? $node['type'],
+            'config' => $node['config'] ?? [],
+            'positionX' => $node['positionX'] ?? 0,
+            'positionY' => $node['positionY'] ?? 0,
+        ], $nodes)),
+        'edges' => array_values(array_map(fn (array $edge): array => [
+            'sourceNodeKey' => $edge['source'],
+            'targetNodeKey' => $edge['target'],
+            'sourceHandle' => $edge['handle'] ?? null,
+        ], $edges)),
+    ];
 }

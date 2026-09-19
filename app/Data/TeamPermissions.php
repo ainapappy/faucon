@@ -12,6 +12,9 @@ readonly class TeamPermissions
         public bool $canRemoveMember,
         public bool $canCreateInvitation,
         public bool $canCancelInvitation,
+        public bool $canCreateWorkflow,
+        public bool $canUpdateWorkflow,
+        public bool $canDeleteWorkflow,
     ) {
         //
     }

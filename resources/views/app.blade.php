@@ -36,7 +36,12 @@
 
         @fonts
 
-        @vite(['resources/css/app.css', 'resources/scss/app.scss', 'resources/js/app.ts', "resources/js/pages/{$page['component']}.vue"])
+        @php
+            $pageComponent = "resources/js/pages/{$page['component']}.vue";
+        @endphp
+        @vite(collect(['resources/css/app.css', 'resources/scss/app.scss', 'resources/js/app.ts'])
+            ->when(file_exists(resource_path("js/pages/{$page['component']}.vue")), fn ($entries) => $entries->push($pageComponent))
+            ->all())
         <x-inertia::head>
             <title>{{ config('app.name', 'Laravel') }}</title>
         </x-inertia::head>
