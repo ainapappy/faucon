@@ -1,0 +1,12 @@
+// Styles personnalisés du projet, écrits en SCSS (préférence projet).
+//
+// Chargé APRÈS resources/css/app.css (voir vite.config.ts et app.blade.php) :
+// il peut donc surcharger les styles de base à spécificité égale.
+//
+// Règles projet :
+// - Les tokens de design (couleurs, rayons, typographie) restent en custom
+//   properties dans resources/css/app.css — miroir de .knowledge/design/css/tokens.css.
+//   Ne pas les dupliquer en variables SCSS.
+// - Utiliser @use (Sass moderne) pour les partials (_nom.scss), pas @import (déprécié).
+// - Le CSS reste supporté : les styles ponctuels peuvent aussi vivre en .css,
+//   ajouté comme entrée Vite au même titre que celui-ci.
