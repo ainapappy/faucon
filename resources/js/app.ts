@@ -5,15 +5,15 @@ import AuthSplitLayout from '@/layouts/auth/AuthSplitLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
 import { configureEcho } from '@laravel/echo-vue';
-import { configureEcho } from '@laravel/echo-vue';
 
 configureEcho({
     broadcaster: 'reverb',
 });
 
-configureEcho({
-    broadcaster: 'reverb',
-});
+// Écouteur de debug Reverb, actif seulement en développement...
+if (import.meta.env.DEV) {
+    void import('@/lib/realtimeDebug').then((m) => m.initializeRealtimeDebug());
+}
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 

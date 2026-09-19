@@ -19,6 +19,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Public Channel Names
+    |--------------------------------------------------------------------------
+    |
+    | Named public channels used across the application. The debug channel
+    | carries the ping events that validate the real-time pipeline.
+    |
+    */
+
+    'debug_channel' => env('PUSHER_APP_CHANNEL', 'debug'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Broadcast Connections
     |--------------------------------------------------------------------------
     |
