@@ -4,6 +4,7 @@ includes:
 
 parameters:
     paths:
+        - ainatrix/
         - app/
         - bootstrap/app.php
         - config/
