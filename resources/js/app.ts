@@ -1,10 +1,25 @@
-import { createInertiaApp } from '@inertiajs/vue3';
+import { createInertiaApp, usePage } from '@inertiajs/vue3';
 import { initializeTheme } from '@/composables/useAppearance';
 import AppLayout from '@/layouts/AppLayout.vue';
 import AuthSplitLayout from '@/layouts/auth/AuthSplitLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
+import { setUrlDefaults } from '@/wayfinder';
 import { configureEcho } from '@laravel/echo-vue';
+
+/*
+ * Wayfinder : les routes préfixées par l'équipe ({current_team}, {team})
+ * s'appuient sur URL::defaults() côté serveur (SetTeamUrlDefaults). La valeur
+ * étant dynamique, le code généré garde le placeholder « $currentTeam » comme
+ * repli ; on fournit ici le vrai slug à l'exécution depuis les props Inertia
+ * partagées. La fonction est réévaluée à chaque génération d'URL : un
+ * changement d'équipe courante est immédiatement pris en compte.
+ */
+setUrlDefaults(() => {
+    const slug = usePage().props.currentTeam?.slug;
+
+    return slug ? { current_team: slug, team: slug } : {};
+});
 
 // Echo ne vit que dans le navigateur : en SSR, pusher-js n'a pas de clé
 // et rejetterait une promesse non gérée au warmup du module graph...

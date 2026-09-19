@@ -12,7 +12,10 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
     test: {
         environment: 'node',
-        include: ['resources/js/composables/__tests__/**/*.spec.ts'],
+        include: [
+            'resources/js/composables/__tests__/**/*.spec.ts',
+            'resources/js/routes/__tests__/**/*.spec.ts',
+        ],
     },
     resolve: {
         alias: {
