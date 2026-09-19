@@ -64,7 +64,7 @@ function launch(): void {
 
 <template>
     <Dialog v-model:open="open">
-        <DialogContent class="max-w-[520px]" data-test="test-run-dialog">
+        <DialogContent class="max-w-130" data-test="test-run-dialog">
             <DialogHeader>
                 <DialogTitle>Tester le workflow</DialogTitle>
                 <DialogDescription>
@@ -117,7 +117,7 @@ function launch(): void {
                     @click="launch"
                 >
                     <Spinner v-if="launching" class="h-3.5 w-3.5" />
-                    <Play v-else class="h-[15px] w-[15px]" />
+                    <Play v-else class="h-3.75 w-3.75" />
                     Lancer le test
                 </Button>
             </DialogFooter>

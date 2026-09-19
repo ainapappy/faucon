@@ -123,7 +123,7 @@ const outputJson = computed(() =>
 
 <template>
     <aside
-        class="bg-card w-[296px] flex-none overflow-y-auto border-l"
+        class="bg-card w-74 flex-none overflow-y-auto border-l"
         :class="{ 'inspector-hidden': !open }"
         data-test="node-inspector"
     >
@@ -133,7 +133,7 @@ const outputJson = computed(() =>
                 class="bg-card sticky top-0 z-2 flex items-center gap-2 border-b px-4 py-3.5"
             >
                 <span
-                    class="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-md"
+                    class="flex h-7.5 w-7.5 flex-none items-center justify-center rounded-md"
                     :style="{
                         background: `color-mix(in srgb, ${colorToken} 13%, transparent)`,
                         color: colorToken,
@@ -141,7 +141,7 @@ const outputJson = computed(() =>
                 >
                     <component
                         :is="nodeIcon(definition?.icon)"
-                        class="h-[15px] w-[15px]"
+                        class="h-3.75 w-3.75"
                     />
                 </span>
                 <div class="min-w-0 flex-1">

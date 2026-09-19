@@ -48,7 +48,7 @@ const status = computed(() => props.data.status ?? 'idle');
     >
         <div class="flex items-center gap-2 px-3 pt-2.5 pb-2">
             <span class="builder-node-icon">
-                <component :is="typeIcon" class="h-[15px] w-[15px]" />
+                <component :is="typeIcon" class="h-3.75 w-3.75" />
             </span>
 
             <span class="min-w-0 flex-1">
@@ -62,7 +62,7 @@ const status = computed(() => props.data.status ?? 'idle');
             </span>
 
             <span
-                class="flex h-[18px] w-[18px] flex-none items-center justify-center"
+                class="flex h-4.5 w-4.5 flex-none items-center justify-center"
             >
                 <Spinner
                     v-if="status === 'running'"
@@ -70,11 +70,11 @@ const status = computed(() => props.data.status ?? 'idle');
                 />
                 <CircleCheck
                     v-else-if="status === 'ok'"
-                    class="builder-node-check text-success h-[15px] w-[15px]"
+                    class="builder-node-check text-success h-3.75 w-3.75"
                 />
                 <CircleX
                     v-else-if="status === 'error'"
-                    class="text-destructive h-[15px] w-[15px]"
+                    class="text-destructive h-3.75 w-3.75"
                 />
             </span>
         </div>
@@ -89,7 +89,7 @@ const status = computed(() => props.data.status ?? 'idle');
             <component
                 v-if="category"
                 :is="category.icon"
-                class="h-[11px] w-[11px]"
+                class="h-2.75 w-2.75"
             />
             {{ category?.label ?? '—' }}
         </div>

@@ -50,7 +50,7 @@ const saveLabel = computed(() => {
         return `Enregistré · ${props.savedAt}`;
     }
     if (props.saveState === 'error') {
-        return 'Échec de l’enregistrement';
+        return "Échec de l'enregistrement";
     }
     return 'Enregistrement…';
 });
@@ -58,26 +58,26 @@ const saveLabel = computed(() => {
 
 <template>
     <header
-        class="bg-background flex h-[52px] flex-none items-center gap-2.5 border-b px-3.5"
+        class="bg-background flex h-13 flex-none items-center gap-2.5 border-b px-3.5"
     >
         <Button
             variant="ghost"
             size="icon"
-            class="text-muted-foreground h-[34px] w-[34px]"
+            class="text-muted-foreground h-8.5 w-8.5"
             aria-label="Retour aux workflows"
             data-test="builder-back"
             @click="emit('back')"
         >
-            <ArrowLeft class="h-[17px] w-[17px]" />
+            <ArrowLeft class="h-4.25 w-4.25" />
         </Button>
 
         <div class="flex min-w-0 items-center gap-2">
             <Workflow
-                class="text-muted-foreground h-[15px] w-[15px] flex-none"
+                class="text-muted-foreground h-3.75 w-3.75 flex-none"
             />
             <Input
                 v-model="name"
-                class="hover:bg-muted focus-visible:bg-background h-auto w-[230px] border-transparent px-2 py-1 text-[14.5px] font-semibold shadow-none hover:shadow-none focus-visible:shadow-none"
+                class="hover:bg-muted focus-visible:bg-background h-auto w-57.5 border-transparent px-2 py-1 text-[14.5px] font-semibold shadow-none hover:shadow-none focus-visible:shadow-none"
                 :disabled="!canUpdateWorkflow"
                 aria-label="Nom du workflow"
                 data-test="builder-name"
@@ -147,7 +147,7 @@ const saveLabel = computed(() => {
             <Button
                 variant="ghost"
                 size="icon"
-                class="h-[34px] w-[34px]"
+                class="h-8.5 w-8.5"
                 :class="{ 'text-foreground': paletteOpen }"
                 aria-label="Palette de nodes"
                 @click="emit('togglePalette')"
@@ -158,7 +158,7 @@ const saveLabel = computed(() => {
             <Button
                 variant="ghost"
                 size="icon"
-                class="h-[34px] w-[34px]"
+                class="h-8.5 w-8.5"
                 :class="{ 'text-foreground': journalOpen }"
                 aria-label="Journal d'exécution"
                 @click="emit('toggleJournal')"
