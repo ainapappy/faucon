@@ -12,7 +12,7 @@ type DebugPingPayload = {
 };
 
 const debugChannel = (): string =>
-    import.meta.env.VITE_PUSHER_APP_CHANNEL || 'debug';
+    import.meta.env.VITE_REVERB_APP_CHANNEL || 'debug';
 
 export function initializeRealtimeDebug(): void {
     if (!echoIsConfigured()) {

@@ -6,13 +6,17 @@ import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
 import { configureEcho } from '@laravel/echo-vue';
 
-configureEcho({
-    broadcaster: 'reverb',
-});
+// Echo ne vit que dans le navigateur : en SSR, pusher-js n'a pas de clé
+// et rejetterait une promesse non gérée au warmup du module graph...
+if (typeof window !== 'undefined') {
+    configureEcho({
+        broadcaster: 'reverb',
+    });
 
-// Écouteur de debug Reverb, actif seulement en développement...
-if (import.meta.env.DEV) {
-    void import('@/lib/realtimeDebug').then((m) => m.initializeRealtimeDebug());
+    // Écouteur de debug Reverb, actif seulement en développement...
+    if (import.meta.env.DEV) {
+        void import('@/lib/realtimeDebug').then((m) => m.initializeRealtimeDebug());
+    }
 }
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';

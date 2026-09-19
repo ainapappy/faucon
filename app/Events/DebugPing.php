@@ -15,7 +15,7 @@ class DebugPing implements ShouldBroadcastNow
     /**
      * The public channel the event broadcasts on.
      *
-     * `PUSHER_APP_CHANNEL` names the application's public channel.
+     * `REVERB_APP_CHANNEL` names the application's public channel.
      *
      * @return array<int, Channel>
      */
