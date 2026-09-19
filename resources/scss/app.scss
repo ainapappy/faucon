@@ -10,3 +10,5 @@
 // - Utiliser @use (Sass moderne) pour les partials (_nom.scss), pas @import (déprécié).
 // - Le CSS reste supporté : les styles ponctuels peuvent aussi vivre en .css,
 //   ajouté comme entrée Vite au même titre que celui-ci.
+
+@use 'auth';

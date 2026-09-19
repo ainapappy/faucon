@@ -18,6 +18,7 @@ test('new users can register and are redirected to email verification', function
         'email' => 'test@example.com',
         'password' => 'password',
         'password_confirmation' => 'password',
+        'terms' => true,
     ]);
 
     $response->assertRedirect(route('verification.notice'));
@@ -42,12 +43,27 @@ test('registration requires valid information', function () {
     $this->assertGuest();
 });
 
+test('registration fails when terms are not accepted', function () {
+    $response = $this->postJson(route('register.store'), [
+        'name' => 'Test User',
+        'email' => 'test@example.com',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+    ]);
+
+    $response->assertUnprocessable()
+        ->assertInvalid(['terms' => 'The terms field must be accepted.']);
+    $this->assertGuest();
+    $this->assertDatabaseCount('users', 0);
+});
+
 test('registration lowercases the email address', function () {
     $response = $this->post(route('register.store'), [
         'name' => 'Test User',
         'email' => 'MiXeD@ExAmPlE.com',
         'password' => 'password',
         'password_confirmation' => 'password',
+        'terms' => true,
     ]);
 
     $this->assertAuthenticated();
@@ -62,6 +78,7 @@ test('new users receive an email verification notification', function () {
         'email' => 'test@example.com',
         'password' => 'password',
         'password_confirmation' => 'password',
+        'terms' => true,
     ]);
 
     $user = User::query()->where('email', 'test@example.com')->firstOrFail();
