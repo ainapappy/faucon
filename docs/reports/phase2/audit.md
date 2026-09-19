@@ -64,3 +64,28 @@ Actives : `resetPasswords()`, `emailVerification()`. Absentes : `registration()`
 3. Passkeys (migration, trait + contrat, feature, `PasskeyLoginResponse` team-aware, props Security, UI login + settings) — surface testée sans cérémonie WebAuthn navigateur.
 4. Test direct `TeamPolicy` (dont « non-membre ne peut rien faire ») + pattern d'autorisation documenté (`.knowledge/decisions/authorization.md`).
 5. Scoping team-scoped : déjà tranché phase 1 (`.knowledge/domain.md` §1) — rappel consigné dans `authorization.md`.
+
+## 9. Révision (2026-09-19) — reprise de la phase 2
+
+Relecture des livrables de la phase 2 après la formalisation des conventions (`.knowledge/conventions.md` : namespace `Ainatrix`, SCSS, casse `Ai`) et la reprise de la phase 1. Aucun correctif code nécessaire — les livrables étaient déjà conformes. Aucune fonctionnalité, aucune dépendance.
+
+**Chaîne qualité ré-exécutée — intégralement verte :**
+
+| Outil                 | État        | Détail                                                   |
+| --------------------- | ----------- | -------------------------------------------------------- |
+| Pint (`--dirty`)      | ✅ passed   | Arbre propre, 0 fichier à corriger                       |
+| PHPStan (Larastan L7) | ✅ 0 erreur | Périmètre incluant `ainatrix/`                           |
+| Pest                  | ✅ 121/121  | 423 assertions, 0 skip                                   |
+| `npm run check`       | ✅          | oxfmt 80 fichiers, oxlint 68 fichiers 0 warning          |
+| `npm run types:check` | ✅          | vue-tsc 0 erreur                                         |
+| Build Vite            | ✅          | Succès                                                   |
+| Wayfinder             | ✅          | Régénération idempotente, aucun diff (routes inchangées) |
+
+**Conformité des livrables vérifiée :**
+
+- Backend : `#[Fillable]`/`#[Hidden]` (attributs natifs Laravel 13), `casts(): array`, PHPDoc `@property` complet et array shapes (`SecurityController::securityProps`), types explicites partout, réponses Fortify dans `app/Http/Responses/` avec concern `RedirectsToCurrentTeam`, rate limiter `login` dans `FortifyServiceProvider` — conforme à `conventions.md` §1-2.
+- Frontend : ordre SFC (script → template), un seul élément racine, aucun bloc `<style>` hors kit `ui/`, attributs `data-test`, types dans `types/` (barrel), imports Wayfinder `@/routes/...`, toasts `vue-sonner` — conforme à `conventions.md` §5. Le SCSS introduit après la phase (`resources/scss/app.scss`) n'entre pas en conflit : aucun livrable phase 2 ne porte de style custom.
+- Tests : style fonctions Pest, factories systématiques, aucune création manuelle de modèles — conforme à `conventions.md` §4.
+- Documentation : `vp check` vert (Markdown inclus) ; `.knowledge/decisions/authorization.md` présent (scoping team-scoped + gabarit `{Ressource}Policy`).
+
+**Observation laissée en attente de décision :** `.knowledge/prompts/phase6.md` cite encore `app/Services/AI/**` et les DTOs `AIRequest`/`AIResponse` (casse `AI`), alors que la convention actuelle impose `Ai` (`conventions.md` §2, `domain.md` §3, README corrigé lors de la reprise de la phase 1). Prompt master non modifié sans validation utilisateur ; à trancher avant d'exécuter la phase 6.
