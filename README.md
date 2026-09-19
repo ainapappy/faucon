@@ -140,7 +140,7 @@ app/
 ├── Models/
 ├── Policies/
 ├── Services/
-│   ├── AI/            # abstraction providers IA
+│   ├── Ai/            # abstraction providers IA
 │   ├── Integration/   # client HTTP sécurisé, credentials
 │   └── Workflow/      # moteur : runner, validator, handlers
 └── Support/

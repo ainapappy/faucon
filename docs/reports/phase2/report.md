@@ -9,6 +9,7 @@ Audit complet de la couverture auth réelle (consigné dans [audit.md](audit.md)
 ### Files Created
 
 Backend :
+
 - `app/Actions/Fortify/CreateNewUser.php` — implémente `Laravel\Fortify\Contracts\CreatesNewUsers` ; validation name/email (lowercase, unique)/password (`PasswordValidationRules`) ; `User::create`.
 - `app/Http/Responses/RegisterResponse.php` — contrat Fortify ; `wantsJson()` → 201, sinon redirect `verification.notice` (parcours exigé « inscription → vérification email »).
 - `app/Http/Responses/PasskeyLoginResponse.php` — contrat `Laravel\Passkeys\Contracts\PasskeyLoginResponse` ; trait `RedirectsToCurrentTeam` ; JSON `{redirect}` ou redirect intended.
@@ -16,6 +17,7 @@ Backend :
 - Tests : `tests/Feature/Auth/RegistrationTest.php` (6), `tests/Feature/Auth/TwoFactorChallengeTest.php` (6), `tests/Feature/Auth/PasskeyAuthenticationTest.php` (4), `tests/Feature/Settings/TwoFactorAuthenticationTest.php` (9), `tests/Feature/Settings/PasskeyManagementTest.php` (8), `tests/Feature/Teams/TeamPolicyTest.php` (6) — 39 tests, TDD Red→Green par lot.
 
 Frontend :
+
 - `resources/js/pages/auth/Register.vue` — `<Form>` POST register, InputError par champ, Spinner+disabled pendant processing, `data-test="register-button"`.
 - `resources/js/pages/auth/TwoFactorChallenge.vue` — bascule client code TOTP ↔ recovery code, `autocomplete="one-time-code"`, erreurs `errors.code`/`errors.recovery_code` selon le mode.
 - `resources/js/pages/auth/ConfirmPassword.vue` — `<Form>` POST confirmation password, PasswordInput `current-password`.
@@ -23,6 +25,7 @@ Frontend :
 - `resources/js/components/PasskeySettings.vue` — liste (nom + dernière utilisation), ajout (dialog nom → `usePasskeyRegister`), suppression (dialog confirmation → DELETE, toasts vue-sonner + reload), gating support WebAuthn.
 
 Documentation :
+
 - `docs/reports/phase2/audit.md` — audit auth avant compléments (routes, features, sécurité, couverture, trous retenus).
 - `docs/reports/phase2/report.md` — le présent rapport.
 - `.knowledge/decisions/authorization.md` (gitignoré) — scoping team-scoped rappelé + gabarit `{Ressource}Policy` (type WorkflowPolicy) pour les phases 3+.

@@ -117,3 +117,29 @@ Correctifs volontairement **hors périmètre** (notés, non appliqués) : activa
 - Structure backend/frontend cible **validée comme direction** (master §6-7) : aucun dossier vide créé ; `app/Services/{AI,Workflow,Integration}`, `app/Data`, `app/Support` seront créés au premier besoin réel.
 - Conventions documentées : `.knowledge/conventions.md`.
 - Fondations domaine (scoping, moteur, nommage node types, glossaire, cycles de vie) : `.knowledge/domain.md` (base de connaissance locale, gitignorée).
+
+## 8. Révision (2026-09-19) — reprise de la phase 1
+
+Relecture de la phase 1 après l'avancée de la phase 2 (2FA + passkeys + registration activées, MariaDB par défaut, SCSS, namespace `Ainatrix`) — application des conventions actuelles là où les livrables avaient dérivé. Aucune fonctionnalité métier, aucune dépendance.
+
+**Chaîne qualité ré-exécutée — intégralement verte :**
+
+| Outil                  | État                   | Détail                                                                                                     |
+| ---------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Pint (`lint:check`)    | ✅                     | 0 fichier à corriger                                                                                       |
+| PHPStan (Larastan L7)  | ✅ 0 erreur            | Périmètre étendu à `ainatrix/` depuis le rapport initial                                                   |
+| Pest                   | ✅ 121/121             | 423 assertions, **0 skip** — les 3 skips 2FA du rapport initial ont disparu (features activées en phase 2) |
+| Build Vite             | ✅                     | ~6,5 s                                                                                                     |
+| Wayfinder              | ✅                     | Régénération sans diff — routes générées en synchro (variants `.form()` inclus)                            |
+| oxlint/oxfmt + vue-tsc | ✅ (après 1 correctif) | Voir ci-dessous                                                                                            |
+
+**Correctifs appliqués :**
+
+1. **`docs/reports/phase2/report.md`** — formatage oxfmt (lignes vides manquantes avant listes) qui faisait échouer `npm run check` ; corrigé via `npm run check:fix`. C'était la seule dérive de la chaîne qualité.
+2. **README** — ligne `Services/AI/` corrigée en `Services/Ai/` (convention `domain.md` §3, appliquée immédiatement plutôt qu'en phase 6).
+3. **`.knowledge/conventions.md`** mise à jour : section `ainatrix/{Nom}` (namespace `Ainatrix\`, jamais de référence à `App\`, décision structurelle), règle « app/ reste minimal », casse `Ai` dans la cible `Services/`, section Styles (SCSS : tokens en custom properties uniquement, `@use` pas `@import`), périmètre PHPStan (`ainatrix/` inclus), piège vue-tsc ∥ `wayfinder:generate`.
+4. **`.knowledge/domain.md`** — note §3 actualisée (correction README effectuée).
+
+**Piège consigné** : `npm run types:check` lancé en parallèle d'une régénération `wayfinder:generate` produit de faux `TS2339: Property 'form' does not exist` (fichiers générés en cours de réécriture). Vérifié : la génération (avec ou sans `--with-form`) est idempotente et sans diff ; les erreurs disparaissent en relançant vue-tsc après la génération. Règle : ne pas paralléliser vue-tsc avec une génération Wayfinder.
+
+**Confirmations** : modèles conformes aux attributs natifs (`#[Fillable]`/`#[Hidden]`, `casts()`), aucune propriété legacy ; `skipUnlessFortifyHas` encore utilisé (1 test) ; arbre git propre après correctifs.
