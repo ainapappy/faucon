@@ -44,3 +44,7 @@ yarn-error.log
 /boost.json
 /opencode.json
 /opencode.jsonc
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+composer.lock
