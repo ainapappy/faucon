@@ -12,6 +12,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Laravel\Fortify\Contracts\PasskeyUser;
+use Laravel\Fortify\PasskeyAuthenticatable;
+use Laravel\Fortify\TwoFactorAuthenticatable;
+use Laravel\Passkeys\Passkey;
 
 /**
  * @property int $id
@@ -30,13 +34,14 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, Team> $ownedTeams
  * @property-read Collection<int, Membership> $teamMemberships
  * @property-read Collection<int, Team> $teams
+ * @property-read Collection<int, Passkey> $passkeys
  */
 #[Fillable(['name', 'email', 'password', 'current_team_id'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
-class User extends Authenticatable implements MustVerifyEmail
+class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasTeams, Notifiable;
+    use HasFactory, HasTeams, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /**
      * Get the attributes that should be cast.

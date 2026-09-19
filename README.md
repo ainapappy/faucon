@@ -55,13 +55,13 @@ de node en node via un système de variables `{{ trigger.email }}`, `{{ ai.resul
 
 ### Types de nodes prévus
 
-| Catégorie | Nodes |
-|---|---|
+| Catégorie    | Nodes                                                        |
+| ------------ | ------------------------------------------------------------ |
 | **Triggers** | Manuel · Webhook (idempotent, rate-limité) · Planifié (cron) |
-| **Data** | Input · Output · Transform · HTTP Request |
-| **Logic** | Condition (branches true/false) · Filter · Merge |
-| **AI** | Prompt · Classification · Extraction · Résumé · Génération |
-| **Actions** | Email · HTTP · Webhook |
+| **Data**     | Input · Output · Transform · HTTP Request                    |
+| **Logic**    | Condition (branches true/false) · Filter · Merge             |
+| **AI**       | Prompt · Classification · Extraction · Résumé · Génération   |
+| **Actions**  | Email · HTTP · Webhook                                       |
 
 L'architecture est **extensible par conception** : ajouter un type de node = une classe handler +
 un enregistrement au registre, sans modifier le moteur.
@@ -84,22 +84,22 @@ un enregistrement au registre, sans modifier le moteur.
 Le développement progresse **phase par phase** : chaque phase validée laisse le projet dans un état
 cohérent et committable.
 
-| # | Phase | Contenu | Statut |
-|---|-------|---------|:------:|
-| 1 | Architecture & fondations | Audit du squelette, conventions, scoping équipe, chaîne qualité | ✅ |
-| 2 | Authentification & utilisateurs | Consolidation Fortify, policies, base d'autorisation | 🚧 |
-| 3 | Workflow Builder | Modèle graphe (nodes / edges), éditeur visuel, catalogue de types | ⏳ |
-| 4 | Workflow Engine | Validation, registre de handlers, variables, traversal, test run | ⏳ |
-| 5 | Actions & intégrations | Nodes HTTP / Email, webhook idempotent, credentials chiffrés, SSRF | ⏳ |
-| 6 | AI Provider & AI Nodes | Abstraction providers (OpenAI / Anthropic), 5 nodes IA, structured output | ⏳ |
-| 7 | Exécution & queue | Exécutions persistées, jobs, retries, timeout, cancellation, planification | ⏳ |
-| 8 | Logs & monitoring | Logs par node, redaction des secrets, timeline d'exécution, rétention | ⏳ |
-| 9 | Templates | Templates système / équipe, duplication, publication, galerie | ⏳ |
-| 10 | Dashboard & UX | KPIs, notifications in-app, passe UX et responsive | ⏳ |
-| 11 | Sécurité & durcissement | Audit complet : autorisation, SSRF, rate limiting, XSS, secrets | ⏳ |
-| 12 | Tests | Couverture des zones critiques, edge cases, tests d'intégration | ⏳ |
-| 13 | Optimisation & qualité | N+1, payloads Inertia, code-splitting, mesures avant / après | ⏳ |
-| 14 | Documentation & finalisation | docs/, guides d'extension, exemples, nettoyage | ⏳ |
+| #   | Phase                           | Contenu                                                                    | Statut |
+| --- | ------------------------------- | -------------------------------------------------------------------------- | :----: |
+| 1   | Architecture & fondations       | Audit du squelette, conventions, scoping équipe, chaîne qualité            |   ✅   |
+| 2   | Authentification & utilisateurs | Consolidation Fortify, policies, base d'autorisation                       |   🚧   |
+| 3   | Workflow Builder                | Modèle graphe (nodes / edges), éditeur visuel, catalogue de types          |   ⏳   |
+| 4   | Workflow Engine                 | Validation, registre de handlers, variables, traversal, test run           |   ⏳   |
+| 5   | Actions & intégrations          | Nodes HTTP / Email, webhook idempotent, credentials chiffrés, SSRF         |   ⏳   |
+| 6   | AI Provider & AI Nodes          | Abstraction providers (OpenAI / Anthropic), 5 nodes IA, structured output  |   ⏳   |
+| 7   | Exécution & queue               | Exécutions persistées, jobs, retries, timeout, cancellation, planification |   ⏳   |
+| 8   | Logs & monitoring               | Logs par node, redaction des secrets, timeline d'exécution, rétention      |   ⏳   |
+| 9   | Templates                       | Templates système / équipe, duplication, publication, galerie              |   ⏳   |
+| 10  | Dashboard & UX                  | KPIs, notifications in-app, passe UX et responsive                         |   ⏳   |
+| 11  | Sécurité & durcissement         | Audit complet : autorisation, SSRF, rate limiting, XSS, secrets            |   ⏳   |
+| 12  | Tests                           | Couverture des zones critiques, edge cases, tests d'intégration            |   ⏳   |
+| 13  | Optimisation & qualité          | N+1, payloads Inertia, code-splitting, mesures avant / après               |   ⏳   |
+| 14  | Documentation & finalisation    | docs/, guides d'extension, exemples, nettoyage                             |   ⏳   |
 
 > **Socle déjà en place** : squelette Laravel 13 + Inertia v3, authentification Fortify complète
 > (login, enregistrement, 2FA TOTP, passkeys), gestion des équipes et invitations, pages settings,
@@ -168,14 +168,14 @@ contrôlé par des Policies.
 
 ## 🛠️ Stack technique
 
-| Couche | Technologies |
-|---|---|
-| Backend | Laravel 13 · PHP 8.4 |
-| Auth | Fortify (login, 2FA TOTP, passkeys) · Sanctum |
-| Frontend | Vue 3.5 · Inertia v3 · TypeScript · Tailwind CSS v4 · shadcn-vue (reka-ui, lucide) |
-| Build & routing | Vite 8 · Wayfinder (routes typées générées) |
-| Données | **MariaDB / MySQL par défaut** (SQLite et PostgreSQL possibles) · queue `database` |
-| Qualité | Pest 5 · PHPStan (Larastan) · Pint · Vitest |
+| Couche          | Technologies                                                                       |
+| --------------- | ---------------------------------------------------------------------------------- |
+| Backend         | Laravel 13 · PHP 8.4                                                               |
+| Auth            | Fortify (login, 2FA TOTP, passkeys) · Sanctum                                      |
+| Frontend        | Vue 3.5 · Inertia v3 · TypeScript · Tailwind CSS v4 · shadcn-vue (reka-ui, lucide) |
+| Build & routing | Vite 8 · Wayfinder (routes typées générées)                                        |
+| Données         | **MariaDB / MySQL par défaut** (SQLite et PostgreSQL possibles) · queue `database` |
+| Qualité         | Pest 5 · PHPStan (Larastan) · Pint · Vitest                                        |
 
 ## 🚀 Démarrage rapide
 

@@ -6,7 +6,6 @@ use App\Models\TeamInvitation;
 use App\Models\User;
 use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Testing\AssertableInertia as Assert;
-use Laravel\Fortify\Features;
 
 test('login screen can be rendered', function () {
     $response = $this->get(route('login'));
@@ -48,15 +47,6 @@ test('users can authenticate using the login screen', function () {
 });
 
 test('users with two factor enabled are redirected to two factor challenge', function () {
-    if (! Features::canManageTwoFactorAuthentication()) {
-        $this->markTestSkipped('Two-factor authentication is not enabled.');
-    }
-
-    Features::twoFactorAuthentication([
-        'confirm' => true,
-        'confirmPassword' => true,
-    ]);
-
     $user = User::factory()->withTwoFactor()->create();
 
     $response = $this->post(route('login'), [

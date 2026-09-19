@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
+import { Form, Head, router } from '@inertiajs/vue3';
+import { UserCancelledError } from '@laravel/passkeys';
+import { usePasskeyVerify } from '@laravel/passkeys/vue';
+import { Fingerprint } from '@lucide/vue';
+import { computed, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import TeamInvitationAlert from '@/components/TeamInvitationAlert.vue';
@@ -8,8 +12,10 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { store } from '@/routes/login';
+import { login as passkeyLogin, loginOptions } from '@/routes/passkey';
 import { request } from '@/routes/password';
 import type { TeamInvitationContext } from '@/types';
 
@@ -25,6 +31,34 @@ defineProps<{
     canResetPassword: boolean;
     teamInvitation?: TeamInvitationContext | null;
 }>();
+
+const rememberMe = ref(false);
+
+const {
+    verify: verifyPasskey,
+    isLoading: passkeyLoading,
+    error: passkeyError,
+    errorInstance: passkeyErrorInstance,
+    isSupported: passkeySupported,
+} = usePasskeyVerify({
+    remember: () => rememberMe.value,
+    routes: {
+        options: loginOptions.url(),
+        submit: passkeyLogin.url(),
+    },
+    onSuccess: (response) => {
+        if (response.redirect) {
+            router.visit(response.redirect);
+        }
+    },
+});
+
+// A cancelled browser prompt is a no-op, not an error worth showing.
+const passkeyErrorMessage = computed(() =>
+    passkeyErrorInstance.value instanceof UserCancelledError
+        ? null
+        : passkeyError.value,
+);
 </script>
 
 <template>
@@ -90,7 +124,13 @@ defineProps<{
 
             <div class="flex items-center justify-between">
                 <Label for="remember" class="flex items-center space-x-3">
-                    <Checkbox id="remember" name="remember" :tabindex="3" />
+                    <Checkbox
+                        id="remember"
+                        name="remember"
+                        :tabindex="3"
+                        :checked="rememberMe"
+                        @update:checked="rememberMe = $event === true"
+                    />
                     <span>Remember me</span>
                 </Label>
             </div>
@@ -107,4 +147,33 @@ defineProps<{
             </Button>
         </div>
     </Form>
+
+    <template v-if="passkeySupported">
+        <div class="flex items-center gap-3">
+            <Separator class="flex-1" />
+            <span class="text-muted-foreground text-xs uppercase">Or</span>
+            <Separator class="flex-1" />
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <Button
+                variant="outline"
+                class="w-full"
+                :disabled="passkeyLoading"
+                data-test="passkey-login-button"
+                @click="verifyPasskey"
+            >
+                <Spinner v-if="passkeyLoading" />
+                <Fingerprint v-else />
+                Log in with a passkey
+            </Button>
+
+            <p
+                v-if="passkeyErrorMessage"
+                class="text-center text-sm text-red-600 dark:text-red-500"
+            >
+                {{ passkeyErrorMessage }}
+            </p>
+        </div>
+    </template>
 </template>

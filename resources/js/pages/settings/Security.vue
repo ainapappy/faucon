@@ -3,15 +3,23 @@ import { Form, Head } from '@inertiajs/vue3';
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import PasskeySettings from '@/components/PasskeySettings.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
+import TwoFactorSettings from '@/components/TwoFactorSettings.vue';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { edit } from '@/routes/security';
+import type { Passkey } from '@/types';
 
-// oxfmt-ignore
 type Props = {
     passwordRules: string;
-} ;
+    canManageTwoFactor: boolean;
+    twoFactorEnabled?: boolean;
+    requiresConfirmation?: boolean;
+    canManagePasskeys: boolean;
+    passkeys?: Passkey[];
+};
 
 const props = defineProps<Props>();
 
@@ -100,5 +108,18 @@ defineOptions({
                 </Button>
             </div>
         </Form>
+
+        <template v-if="props.canManageTwoFactor">
+            <Separator />
+            <TwoFactorSettings
+                :two-factor-enabled="props.twoFactorEnabled"
+                :requires-confirmation="props.requiresConfirmation"
+            />
+        </template>
+
+        <template v-if="props.canManagePasskeys">
+            <Separator />
+            <PasskeySettings :passkeys="props.passkeys" />
+        </template>
     </div>
 </template>

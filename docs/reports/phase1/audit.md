@@ -5,22 +5,23 @@
 
 ## 1. Stack — versions réelles
 
-| Couche | Version constatée |
-|---|---|
-| PHP | 8.4.4 |
-| Laravel | 13.32.0 |
-| Base de données | Dev : **MySQL** (`faucon@127.0.0.1:3306`, `.env` basculé pendant la session d'audit) · Tests : sqlite `:memory:` (`phpunit.xml`) · défaut config : sqlite |
-| Fortify | 1.39.0 (+ Sanctum 4.3.3, `laravel/passkeys` 0.2.1 installé, non câblé) |
-| Inertia (back) | `inertiajs/inertia-laravel` 3.3.4 |
-| Inertia (front) | `@inertiajs/vue3` / `@inertiajs/core` / `@inertiajs/vite` 3.7.1 |
-| Vue | 3.5.43 · TypeScript 5.9.3 |
-| Vite | 8.3.0 via **vite-plus 0.3.0** (`vp build/dev/check`) |
-| Tailwind | 4.3.3 (`@tailwindcss/vite`) · shadcn-vue (reka-ui 2.10.4, lucide, vue-sonner 2.0.9, @vueuse/core 12.8.2) |
-| Wayfinder | `laravel/wayfinder` 0.1.21 + `@laravel/vite-plugin-wayfinder` 0.1.10 |
-| Qualité | Pest 5.2.1 (+ plugins laravel/arch/mutate), Larastan 3.12.1 (PHPStan 2.2.14, niveau 7), Pint 1.32.1, oxlint/oxfmt (via vite-plus) |
-| Queue / cache / session / mail | database / database / database / log (dev) |
+| Couche                         | Version constatée                                                                                                                                         |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PHP                            | 8.4.4                                                                                                                                                     |
+| Laravel                        | 13.32.0                                                                                                                                                   |
+| Base de données                | Dev : **MySQL** (`faucon@127.0.0.1:3306`, `.env` basculé pendant la session d'audit) · Tests : sqlite `:memory:` (`phpunit.xml`) · défaut config : sqlite |
+| Fortify                        | 1.39.0 (+ Sanctum 4.3.3, `laravel/passkeys` 0.2.1 installé, non câblé)                                                                                    |
+| Inertia (back)                 | `inertiajs/inertia-laravel` 3.3.4                                                                                                                         |
+| Inertia (front)                | `@inertiajs/vue3` / `@inertiajs/core` / `@inertiajs/vite` 3.7.1                                                                                           |
+| Vue                            | 3.5.43 · TypeScript 5.9.3                                                                                                                                 |
+| Vite                           | 8.3.0 via **vite-plus 0.3.0** (`vp build/dev/check`)                                                                                                      |
+| Tailwind                       | 4.3.3 (`@tailwindcss/vite`) · shadcn-vue (reka-ui 2.10.4, lucide, vue-sonner 2.0.9, @vueuse/core 12.8.2)                                                  |
+| Wayfinder                      | `laravel/wayfinder` 0.1.21 + `@laravel/vite-plugin-wayfinder` 0.1.10                                                                                      |
+| Qualité                        | Pest 5.2.1 (+ plugins laravel/arch/mutate), Larastan 3.12.1 (PHPStan 2.2.14, niveau 7), Pint 1.32.1, oxlint/oxfmt (via vite-plus)                         |
+| Queue / cache / session / mail | database / database / database / log (dev)                                                                                                                |
 
 Remarques :
+
 - **Pas de Vitest configuré** contrairement à ce qu'annonçait le README : les checks front passent par `npm run check` (oxlint type-aware, `denyWarnings`) et `npm run types:check` (vue-tsc). Vitest est présent transitivement via vite-plus mais aucune spec front n'existe.
 - `laravel/passkeys` est installé avec ses migrations **non publiées** (publication requise le jour où la fonctionnalité est câblée — cohérent avec l'absence d'usage dans le code).
 
@@ -79,14 +80,14 @@ Standard starter kit : `fortify.php` (features = resetPasswords + emailVerificat
 
 ## 4. Chaîne qualité — état AVANT correctifs
 
-| Outil | État avant | Détail |
-|---|---|---|
-| Pint | 🔴 1 fichier | `bootstrap/app.php` — fins de ligne mixtes CRLF/LF (`line_ending`) |
-| PHPStan (Larastan L7) | 🔴 1 erreur | `config/sanctum.php:21` — `explode()` sur `bool|string` (`argument.type`, code identique à la config vendor) |
-| Pest | 🔴 74 / 82 | Tous échecs : colonnes 2FA absentes de `users` (factory les écrit) |
-| Build Vite (`npm run build`) | ✅ | 5.4 s |
-| Wayfinder | ✅ | Régénération sans diff |
-| oxlint/vue-tsc (`npm run check`, `npm run types:check`) | ✅ | 0 erreur |
+| Outil                                                   | État avant   | Détail                                                             |
+| ------------------------------------------------------- | ------------ | ------------------------------------------------------------------ |
+| Pint                                                    | 🔴 1 fichier | `bootstrap/app.php` — fins de ligne mixtes CRLF/LF (`line_ending`) |
+| PHPStan (Larastan L7)                                   | 🔴 1 erreur  | `config/sanctum.php:21` — `explode()` sur `bool                    | string` (`argument.type`, code identique à la config vendor) |
+| Pest                                                    | 🔴 74 / 82   | Tous échecs : colonnes 2FA absentes de `users` (factory les écrit) |
+| Build Vite (`npm run build`)                            | ✅           | 5.4 s                                                              |
+| Wayfinder                                               | ✅           | Régénération sans diff                                             |
+| oxlint/vue-tsc (`npm run check`, `npm run types:check`) | ✅           | 0 erreur                                                           |
 
 ## 5. Correctifs de socle appliqués (audit → correction)
 
@@ -102,14 +103,14 @@ Correctifs volontairement **hors périmètre** (notés, non appliqués) : activa
 
 ## 6. Écarts constatés vs hypothèses du prompt de phase
 
-| Hypothèse phase1.md | Réalité constatée | Décision |
-|---|---|---|
-| Base MySQL possible | Départ : SQLite partout. En **cours d'audit, `.env` a été basculé vers MySQL** (`DB_CONNECTION=mysql`, base `faucon`) avec une ligne parasite d'outil BDD (`-- Active: …`) insérée avant `<?php` de `config/database.php` — ligne retirée (corrompt la sortie HTTP) ; le défaut `faucon` est conservé. Tests : toujours sqlite `:memory:`. **Décision officialisée après audit : MariaDB par défaut (pilote natif `mariadb`)** (`.env.example` aligné, sqlite conservé en option) | Constat consigné : config DB-compatible multi-moteurs, tests isolés sur sqlite |
-| « Vitest (front) » | Aucune spec front ; checks = oxlint + vue-tsc | Constat consigné ; Vitest quand logique front testable |
-| Routes sous préfixe `{current_team}` | Seul `dashboard` est scopé `{current_team}` ; reste sous `settings/` | Constat consigné — l'architecture équipe reste solide |
-| 2FA/passkeys câblés | 2FA non activée (tests skip), passkeys non câblés | Activation reportée phase 2 (consolidation auth) |
-| Files d'attente « déjà migrée » | Confirmé (`jobs`, `cache`, queue=database) | RAS |
-| — | `config/database.php` modifié dans le working tree (défaut MySQL `laravel`→`faucon`), hors session agent | Modifié avant l'audit, non annulé, à inclure dans le commit de l'auteur |
+| Hypothèse phase1.md                  | Réalité constatée                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Décision                                                                       |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Base MySQL possible                  | Départ : SQLite partout. En **cours d'audit, `.env` a été basculé vers MySQL** (`DB_CONNECTION=mysql`, base `faucon`) avec une ligne parasite d'outil BDD (`-- Active: …`) insérée avant `<?php` de `config/database.php` — ligne retirée (corrompt la sortie HTTP) ; le défaut `faucon` est conservé. Tests : toujours sqlite `:memory:`. **Décision officialisée après audit : MariaDB par défaut (pilote natif `mariadb`)** (`.env.example` aligné, sqlite conservé en option) | Constat consigné : config DB-compatible multi-moteurs, tests isolés sur sqlite |
+| « Vitest (front) »                   | Aucune spec front ; checks = oxlint + vue-tsc                                                                                                                                                                                                                                                                                                                                                                                                                                     | Constat consigné ; Vitest quand logique front testable                         |
+| Routes sous préfixe `{current_team}` | Seul `dashboard` est scopé `{current_team}` ; reste sous `settings/`                                                                                                                                                                                                                                                                                                                                                                                                              | Constat consigné — l'architecture équipe reste solide                          |
+| 2FA/passkeys câblés                  | 2FA non activée (tests skip), passkeys non câblés                                                                                                                                                                                                                                                                                                                                                                                                                                 | Activation reportée phase 2 (consolidation auth)                               |
+| Files d'attente « déjà migrée »      | Confirmé (`jobs`, `cache`, queue=database)                                                                                                                                                                                                                                                                                                                                                                                                                                        | RAS                                                                            |
+| —                                    | `config/database.php` modifié dans le working tree (défaut MySQL `laravel`→`faucon`), hors session agent                                                                                                                                                                                                                                                                                                                                                                          | Modifié avant l'audit, non annulé, à inclure dans le commit de l'auteur        |
 
 ## 7. Structure cible & fondations
 
