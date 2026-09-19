@@ -62,15 +62,15 @@ Frontend :
 
 `{current_team}` = préfixe slug + `EnsureTeamMembership` (groupe existant) :
 
-| Méthode | URI | Nom |
-| --- | --- | --- |
-| GET | `{current_team}/workflows` | `workflows.index` |
-| POST | `{current_team}/workflows` | `workflows.store` |
-| GET | `{current_team}/workflows/{workflow}/edit` | `workflows.edit` |
-| PATCH | `{current_team}/workflows/{workflow}` | `workflows.update` |
-| DELETE | `{current_team}/workflows/{workflow}` | `workflows.destroy` |
-| POST | `{current_team}/workflows/{workflow}/duplicate` | `workflows.duplicate` |
-| PUT | `{current_team}/workflows/{workflow}/graph` | `workflows.graph.update` |
+| Méthode | URI                                             | Nom                      |
+| ------- | ----------------------------------------------- | ------------------------ |
+| GET     | `{current_team}/workflows`                      | `workflows.index`        |
+| POST    | `{current_team}/workflows`                      | `workflows.store`        |
+| GET     | `{current_team}/workflows/{workflow}/edit`      | `workflows.edit`         |
+| PATCH   | `{current_team}/workflows/{workflow}`           | `workflows.update`       |
+| DELETE  | `{current_team}/workflows/{workflow}`           | `workflows.destroy`      |
+| POST    | `{current_team}/workflows/{workflow}/duplicate` | `workflows.duplicate`    |
+| PUT     | `{current_team}/workflows/{workflow}/graph`     | `workflows.graph.update` |
 
 `php artisan wayfinder:generate` exécuté (avec `--with-form`, cf. Gotchas) : `@/routes/workflows` (+ sous-module `graph`) et actions typées `@/actions/App/Http/Controllers/Workflows/*`. Le front n'a aucune URL codée en dur.
 

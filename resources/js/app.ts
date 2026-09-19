@@ -15,7 +15,9 @@ if (typeof window !== 'undefined') {
 
     // Écouteur de debug Reverb, actif seulement en développement...
     if (import.meta.env.DEV) {
-        void import('@/lib/realtimeDebug').then((m) => m.initializeRealtimeDebug());
+        void import('@/lib/realtimeDebug').then((m) =>
+            m.initializeRealtimeDebug(),
+        );
     }
 }
 

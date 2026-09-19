@@ -110,3 +110,22 @@ Application du flux design-first aux pages auth : les maquettes `.knowledge/desi
 **Transpositions structurelles (maquette → contraintes Fortify/Inertia) :** le défi 2FA reste une page dédiée (Fortify redirige) au design de l'étape maquettée ; l'état succès register vit dans `VerifyEmail` (redirection `verification.notice`) ; l'email affiché vient de `auth.user.email` ; « Retour à la connexion » déclenche le logout existant ; l'erreur d'identifiants (`errors.email`) s'affiche en alerte en tête plutôt qu'en InputError (évite le doublon) ; logo `AppLogoIcon` au lieu du `logo.svg` de la maquette ; artefacts de démo (chips, prefill, toasts) non repris. Sérialisation CGU vérifiée : reka-ui rend un `VisuallyHiddenInput` (`value "on"`, accepté par la règle) — cochée poste `terms=on`, décochée poste rien → 422.
 
 **À suivre (hors périmètre) :** `TeamInvitationAlert` encore en anglais (hors liste de fichiers, passe dédiée) ; liens CGU en `#` (pages conditions/confidentialité à créer) ; bascule globale `--primary` ambre ; homogénéisation linguistique du reste de l'app.
+
+## 11. Révision UI/UX (2026-09-19, complément) — forgot / reset / confirm password
+
+Prolongement du §10 : les trois pages auth restantes avaient été laissées en l'état faute de maquette — les maquettes sont créées puis implémentées, mêmes règles (maquette = source de vérité, texte visible français / attributs techniques anglais).
+
+**Maquettes créées** (`.knowledge/design/`) : `forgot-password.html`, `reset-password.html`, `confirm-password.html` — split-panel et panneau de marque repris de login.html, **champs strictement identiques aux formulaires actuels** (pas de jauge de force sur reset : absente de l'existant), 100 % classes CSS existantes (`alert-success` déjà dans components.css), 3 cards ajoutées au hub `index.html` (mail-question / key-round / shield-check, renumérotation anim-in).
+
+**Pages implémentées :**
+
+- `ForgotPassword.vue` — split-panel (variant `login`), header maquette, alerte succès (`status`) **au-dessus du formulaire qui reste utilisable** (miroir du comportement réel), bouton Send « Envoyer le lien », retour « Ou, retour à la connexion » ; prop `status` et `data-test` conservés.
+- `ResetPassword.vue` — email readonly pré-rempli, token injecté via `:transform` (jamais de champ visible), password + confirmation avec cadenas gauche et placeholders maquette, `:passwordrules` conservé sur les deux champs, mismatch inline via `usePasswordMatch` (bouton désactivé si non conforme) ; props `token`/`email`/`passwordRules` inchangées.
+- `ConfirmPassword.vue` — password seul (cadenas, autofocus), header « Zone sécurisée », bouton Check « Confirmer ».
+- `app.ts` — **toutes** les pages `auth/*` passent en `AuthSplitLayout` (Forgot/Reset/Confirm incluses).
+
+Shake sur erreur réelle (`useErrorShake`) appliqué aux trois ; labels processing « Envoi… / Réinitialisation… / Confirmation… ».
+
+**Orphelins à supprimer (proposé, non fait) :** `layouts/AuthLayout.vue` (wrapper) et `layouts/auth/AuthSimpleLayout.vue` — plus aucun import depuis le basculement split ; `layouts/auth/AuthCardLayout.vue` était déjà orphelin (kit non utilisé).
+
+**Chaîne qualité sur l'arbre final** (incluant les commits parallèles broadcasting Reverb et tests workflow d'une autre session) : Pint passed · PHPStan 0 erreur · Pest **196/196** (737 assertions) · `npm run check` 112 fichiers formatés / 98 lint · vue-tsc 0 erreur · build succès. Aucune route modifiée → wayfinder non requis.
