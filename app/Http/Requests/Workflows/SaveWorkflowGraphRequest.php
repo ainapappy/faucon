@@ -135,10 +135,6 @@ class SaveWorkflowGraphRequest extends FormRequest
     private function validateEdgeHandles(Validator $validator, array $edges, array $nodesByKey): void
     {
         foreach ($edges as $index => $edge) {
-            if ($edge['sourceHandle'] === null) {
-                continue;
-            }
-
             $type = $nodesByKey[(string) $edge['sourceNodeKey']]['type'] ?? null;
 
             if (! is_string($type)) {
@@ -152,6 +148,21 @@ class SaveWorkflowGraphRequest extends FormRequest
             }
 
             $outputs = array_column($definition->outputs, 'id');
+
+            // A type with zero output ports (data.output) cannot start an
+            // edge at all — even in the null-handle default form.
+            if ($outputs === []) {
+                $validator->errors()->add(
+                    "edges.{$index}.sourceHandle",
+                    __('The node type ":type" declares no output port.', ['type' => $type]),
+                );
+
+                continue;
+            }
+
+            if ($edge['sourceHandle'] === null) {
+                continue;
+            }
 
             if (! in_array((string) $edge['sourceHandle'], $outputs, true)) {
                 $validator->errors()->add(

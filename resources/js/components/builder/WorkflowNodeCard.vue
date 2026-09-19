@@ -39,6 +39,8 @@ const status = computed(() => props.data.status ?? 'idle');
             'builder-node-running': status === 'running',
             'builder-node-ok': status === 'ok',
             'builder-node-error': status === 'error',
+            // Node non parcouru (branche non prise, isolé…) : estompé, pas d'icône d'état.
+            'builder-node-skipped': status === 'skipped',
             'builder-node-dragging': dragging,
         }"
         :style="{ '--node-color': colorToken }"
@@ -166,6 +168,11 @@ const status = computed(() => props.data.status ?? 'idle');
     box-shadow:
         0 0 0 3px var(--danger-soft),
         var(--shadow-md);
+}
+
+/* Node non parcouru (branche non prise, isolé, aval d'une sortie) : estompé. */
+.builder-node-skipped {
+    opacity: 0.55;
 }
 
 .builder-node-dragging {

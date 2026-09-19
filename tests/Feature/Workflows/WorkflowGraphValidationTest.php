@@ -208,3 +208,32 @@ test('activating with a trigger node succeeds', function () {
 
     expect($workflow->fresh()->status->value)->toBe('active');
 });
+
+test('an output node is accepted and an edge starting from it is refused', function () {
+    [$user, $team] = teamWithMember();
+    $workflow = Workflow::factory()->for($team)->create();
+
+    $payload = graphPayload(
+        nodes: [
+            ['key' => 'n1', 'type' => 'trigger.manual'],
+            ['key' => 'n2', 'type' => 'data.output'],
+        ],
+        edges: [['source' => 'n1', 'target' => 'n2']],
+    );
+
+    $this->actingAs($user)
+        ->putJson(route('workflows.graph.update', ['current_team' => $team->slug, 'workflow' => $workflow->id]), $payload)
+        ->assertNoContent();
+
+    $response = $this->actingAs($user)
+        ->putJson(route('workflows.graph.update', ['current_team' => $team->slug, 'workflow' => $workflow->id]), graphPayload(
+            nodes: [
+                ['key' => 'n1', 'type' => 'trigger.manual'],
+                ['key' => 'n2', 'type' => 'data.output'],
+            ],
+            edges: [['source' => 'n2', 'target' => 'n1']],
+        ));
+
+    $response->assertUnprocessable()
+        ->assertJsonValidationErrors(['edges.0.sourceHandle']);
+});

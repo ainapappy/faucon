@@ -10,6 +10,7 @@ import BuilderTopbar from '@/components/builder/BuilderTopbar.vue';
 import ExecDrawer from '@/components/builder/ExecDrawer.vue';
 import NodeInspector from '@/components/builder/NodeInspector.vue';
 import NodePalette from '@/components/builder/NodePalette.vue';
+import TestRunDialog from '@/components/builder/TestRunDialog.vue';
 import { Button } from '@/components/ui/button';
 import {
     useWorkflowBuilder,
@@ -22,11 +23,14 @@ import {
 } from '@/composables/useWorkflowSaver';
 import { useAppearance } from '@/composables/useAppearance';
 import {
-    useWorkflowSimulation,
-    type UseWorkflowSimulationReturn,
-} from '@/composables/useWorkflowSimulation';
+    formatRunSeconds,
+    useWorkflowTestRun,
+    type UseWorkflowTestRunReturn,
+} from '@/composables/useWorkflowTestRun';
 import workflows, { index as workflowsIndex } from '@/routes/workflows';
 import type {
+    ExecutionResult,
+    NodeRunResult,
     NodeTypeCatalog,
     WorkflowDetail,
     WorkflowGraph,
@@ -79,31 +83,49 @@ const { zoomIn, zoomOut, fitView, viewport, screenToFlowCoordinate } =
 const zoomPercent = computed(() => Math.round(viewport.value.zoom * 100));
 
 /*
- * Modèle du graphe, puis simulation — les deux se référencent par closure
- * (le builder lit les états de simulation pour colorer nodes et arêtes).
+ * Modèle du graphe, puis test réel — les deux se référencent par closure
+ * (le builder lit les états du test pour colorer nodes et arêtes).
  */
-let simulation: UseWorkflowSimulationReturn | null = null;
+let testRun: UseWorkflowTestRunReturn | null = null;
 
 const builder = useWorkflowBuilder(props.nodeTypes, props.graph, {
-    getNodeStatus: (key) => simulation?.statuses.value[key] ?? 'idle',
-    isEdgeFlowing: (id) => simulation?.flowingEdgeIds.value.has(id) ?? false,
-});
-
-simulation = useWorkflowSimulation({
-    getNodes: () => builder.nodes.value,
-    getEdges: () => builder.edges.value,
-    getDefinition: (type) => builder.definitionFor(type),
-    onEmpty: () =>
-        toast.info('Graphe vide', {
-            description:
-                'Ajoutez des nodes depuis la palette avant de lancer la simulation.',
-        }),
+    getNodeStatus: (key) => testRun?.statuses.value[key] ?? 'idle',
+    isEdgeFlowing: (id) => testRun?.flowingEdgeIds.value.has(id) ?? false,
 });
 
 /* ---- Panneaux ---- */
 const paletteOpen = ref(true);
 const inspectorOpen = ref(true);
 const journalOpen = ref(false);
+const testRunDialogOpen = ref(false);
+
+/** Échantillon proposé par la modale (maquette builder.html). */
+const defaultSampleInput: Record<string, unknown> = {
+    email: 'client@example.com',
+    name: 'Aina',
+    message: 'Bonjour, je souhaite un devis pour le pack Pro.',
+};
+
+const selectedNodeResult = computed<NodeRunResult | null>(() => {
+    const key = builder.selectedNode.value?.key;
+    return (key && testRun?.resultsByKey.value.get(key)) || null;
+});
+
+testRun = useWorkflowTestRun({
+    postTestRun,
+    getNodes: () => builder.nodes.value,
+    getEdges: () => builder.edges.value,
+    // La réponse est là : la modale se ferme et le tiroir s'ouvre pour la relecture.
+    onRunStarted: () => {
+        testRunDialogOpen.value = false;
+        journalOpen.value = true;
+    },
+    onRequestError: (messages) =>
+        toast.error('Test impossible', {
+            // La modale reste ouverte pour corriger l'échantillon (master §20).
+            description: messages.slice(0, 3).join(' '),
+        }),
+});
 
 /* ---- Thème (le builder est plein écran, sans sidebar) ---- */
 const { resolvedAppearance, updateAppearance } = useAppearance();
@@ -280,18 +302,84 @@ async function goBack(): Promise<void> {
     router.visit(workflowsIndex({ current_team: teamSlug.value }).url);
 }
 
-/* ---- Simulation d'exécution (A1) ---- */
-async function run(): Promise<void> {
-    if (!simulation || simulation.running.value) {
+/* ---- Test réel du workflow (phase 4, U2) : modale d'échantillon → run ---- */
+const testRunHttp = useHttp<{ input: string }, ExecutionResult>({ input: '' });
+
+async function postTestRun(
+    sample: Record<string, unknown>,
+): Promise<ExecutionResult> {
+    let settled = false;
+    return new Promise<ExecutionResult>((resolve, reject) => {
+        // Le contrat attend la chaîne JSON, pas un objet.
+        testRunHttp.input = JSON.stringify(sample);
+        void testRunHttp
+            .post(
+                workflows.testRun({
+                    current_team: teamSlug.value,
+                    workflow: props.workflow.id,
+                }).url,
+                {
+                    onSuccess: (response) => {
+                        settled = true;
+                        resolve(response);
+                    },
+                    onError: (errors) => {
+                        settled = true;
+                        reject(toRequestFailure(Object.values(errors)));
+                    },
+                    onHttpException: (response) => {
+                        settled = true;
+                        reject(
+                            toRequestFailure([
+                                `Erreur ${response.status} — session expirée ou serveur indisponible.`,
+                            ]),
+                        );
+                    },
+                },
+            )
+            .catch((error) => {
+                if (!settled) {
+                    reject(
+                        error instanceof RequestFailure
+                            ? error
+                            : toRequestFailure([
+                                  'Erreur réseau pendant le test.',
+                              ]),
+                    );
+                }
+            });
+    });
+}
+
+function openTestDialog(): void {
+    if (testRun?.state.value === 'running') {
         return;
     }
-    journalOpen.value = true;
-    await simulation.start();
-    if (simulation.summary.value) {
-        toast.success('Exécution réussie (simulation)', {
-            description: `${simulation.summary.value.nodes} nodes · ${(simulation.summary.value.durationMs / 1000).toFixed(1)} s`,
-        });
+    testRunDialogOpen.value = true;
+}
+
+async function launchTest(sample: Record<string, unknown>): Promise<void> {
+    if (!testRun) {
+        return;
     }
+    await testRun.start(sample);
+
+    const result = testRun.result.value;
+    if (!result) {
+        // 422 / erreur réseau : déjà toastée via onRequestError, modale toujours ouverte.
+        return;
+    }
+    if (result.status === 'completed') {
+        toast.success('Test réussi', {
+            description: `${result.nodes.length} nodes · ${formatRunSeconds(result.durationMs)}`,
+        });
+        return;
+    }
+    toast.error('Test échoué', {
+        description:
+            result.errors[0]?.message ??
+            'Le workflow n’est pas exécutable en l’état.',
+    });
 }
 
 /* ---- Événements du canvas ---- */
@@ -362,10 +450,11 @@ function onKeydown(event: KeyboardEvent): void {
 onMounted(() => {
     window.addEventListener('keydown', onKeydown);
 
-    // « Exécuter maintenant » depuis la liste : auto-run à l'arrivée (?run=1, A2).
+    // « Exécuter maintenant » depuis la liste (AM2) : ouvre la modale
+    // d'échantillon — le run réel exige un input, plus d'auto-run silencieux.
     const query = new URL(window.location.href).searchParams;
     if (query.get('run') === '1') {
-        void run();
+        openTestDialog();
     }
 });
 
@@ -387,12 +476,12 @@ onBeforeUnmount(() => {
             :save-state="saver.state.value"
             :saved-at="saver.savedAt.value"
             :zoom-percent="zoomPercent"
-            :running="simulation.running.value"
+            :running="testRun.state.value === 'running'"
             :palette-open="paletteOpen"
             :journal-open="journalOpen"
             :can-update-workflow="permissions.canUpdateWorkflow"
             @back="goBack"
-            @run="run"
+            @run="openTestDialog"
             @zoom-in="() => zoomIn()"
             @zoom-out="() => zoomOut()"
             @fit-view="() => fitView()"
@@ -429,6 +518,7 @@ onBeforeUnmount(() => {
                 "
                 :status="workflowStatus"
                 :can-update-workflow="permissions.canUpdateWorkflow"
+                :node-result="selectedNodeResult"
                 @update-node-name="
                     (key, name) => builder.setNodeName(key, name)
                 "
@@ -442,12 +532,20 @@ onBeforeUnmount(() => {
 
             <ExecDrawer
                 :open="journalOpen"
-                :logs="simulation.logs.value"
-                :running="simulation.running.value"
-                :summary="simulation.summary.value"
+                :state="testRun.state.value"
+                :result="testRun.result.value"
+                :statuses="testRun.statuses.value"
                 @close="journalOpen = false"
             />
         </div>
+
+        <!-- Modale « Tester » : input d'échantillon requis avant tout run (U2/AM2). -->
+        <TestRunDialog
+            v-model:open="testRunDialogOpen"
+            :sample-input="defaultSampleInput"
+            :launching="testRun.state.value === 'running'"
+            @launch="launchTest"
+        />
 
         <!-- Bouton thème : le builder est plein écran, hors shell à sidebar -->
         <Button

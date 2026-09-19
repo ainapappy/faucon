@@ -29,7 +29,7 @@ test('the workflows index renders the list of the current team', function () {
             ->where('workflows.0.status', 'draft')
             ->where('workflows.0.nodesCount', 2)
             ->where('workflows.0.triggerType', 'trigger.webhook')
-            ->has('nodeTypes', 14)
+            ->has('nodeTypes', 15)
             ->has('permissions.canCreateWorkflow')
             ->missing('workflows.0.deleted_at')
         );

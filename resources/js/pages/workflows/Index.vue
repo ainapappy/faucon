@@ -107,7 +107,7 @@ const list = useWorkflowList({
     toggleRequest,
 });
 
-/** « Exécuter maintenant » → builder avec auto-run de la simulation (?run=1, A2). */
+/** « Exécuter maintenant » → builder avec ouverture de la modale Tester (?run=1, AM2). */
 function runNow(workflow: WorkflowListItem): void {
     router.visit(
         edit(

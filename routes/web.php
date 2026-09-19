@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Teams\TeamInvitationController;
 use App\Http\Controllers\Workflows\SaveWorkflowGraphController;
+use App\Http\Controllers\Workflows\TestRunWorkflowController;
 use App\Http\Controllers\Workflows\WorkflowController;
 use App\Http\Middleware\EnsureTeamMembership;
 use Illuminate\Support\Facades\Route;
@@ -21,6 +22,7 @@ Route::prefix('{current_team}')
         Route::delete('workflows/{workflow}', [WorkflowController::class, 'destroy'])->name('workflows.destroy');
         Route::post('workflows/{workflow}/duplicate', [WorkflowController::class, 'duplicate'])->name('workflows.duplicate');
         Route::put('workflows/{workflow}/graph', SaveWorkflowGraphController::class)->name('workflows.graph.update');
+        Route::post('workflows/{workflow}/test-run', TestRunWorkflowController::class)->name('workflows.test-run');
     });
 
 Route::middleware(['auth'])->group(function () {

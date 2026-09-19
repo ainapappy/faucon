@@ -1,34 +1,42 @@
 <script setup lang="ts">
-import { CircleCheck, Terminal, X } from '@lucide/vue';
-import { nextTick, ref, watch } from 'vue';
+import { CircleCheck, CircleX, Terminal, X } from '@lucide/vue';
+import { computed } from 'vue';
+import ExecDrawerNodeRow from '@/components/builder/ExecDrawerNodeRow.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import type { SimulationLogEntry, SimulationSummary } from '@/types';
+import { formatRunSeconds } from '@/composables/useWorkflowTestRun';
+import type { ExecutionResult, NodeRunStatus, TestRunState } from '@/types';
 
+/*
+ * Tiroir de résultats du « Tester » (maquette builder.html, phase 4) :
+ * les nodes sont listés dans l'ordre d'exécution de la réponse serveur —
+ * statut (ok / error / skipped), durée, sortie réelle repliable, erreur FR.
+ * Pendant la relecture animée, les lignes suivent `statuses` (spinner puis
+ * statut final) ; le résumé n'apparaît qu'à la fin, comme la maquette.
+ */
 const props = defineProps<{
     open: boolean;
-    logs: SimulationLogEntry[];
-    running: boolean;
-    summary: SimulationSummary | null;
+    state: TestRunState;
+    result: ExecutionResult | null;
+    statuses: Record<string, NodeRunStatus>;
 }>();
 
 const emit = defineEmits<{
     close: [];
 }>();
 
-const logsBox = ref<HTMLElement | null>(null);
+const running = computed(() => props.state === 'running');
 
-// Le journal suit la dernière ligne, comme la maquette.
-watch(
-    () => props.logs.length,
-    async () => {
-        await nextTick();
-        if (logsBox.value) {
-            logsBox.value.scrollTop = logsBox.value.scrollHeight;
-        }
-    },
-);
+const summaryMessage = computed(() => {
+    if (!props.result) {
+        return '';
+    }
+    if (props.result.status === 'failed') {
+        return props.result.errors[0]?.message ?? 'Le test a échoué.';
+    }
+    return `${props.result.nodes.length} nodes · ${formatRunSeconds(props.result.durationMs)}`;
+});
 </script>
 
 <template>
@@ -59,49 +67,44 @@ watch(
         </div>
 
         <div
-            ref="logsBox"
-            class="flex-1 overflow-y-auto px-4 pt-2.5 pb-3.5 font-mono text-[11.5px] leading-[1.75]"
+            class="flex-1 overflow-y-auto px-4 pt-1.5 pb-3.5 font-mono text-[11.5px] leading-[1.75]"
+            data-test="exec-drawer-nodes"
         >
-            <p
-                v-for="(entry, index) in logs"
-                :key="`${entry.time}-${index}`"
-                class="flex gap-2.5"
-            >
-                <time class="text-muted-foreground flex-none">{{
-                    entry.time
-                }}</time>
-                <span class="text-brand-ink min-w-[130px] flex-none">{{
-                    entry.source
-                }}</span>
-                <span
-                    class="text-foreground"
-                    :class="{
-                        'text-success': entry.level === 'ok',
-                        'text-destructive': entry.level === 'error',
-                        'text-info': entry.level === 'info',
-                    }"
-                    >{{ entry.message }}</span
-                >
-            </p>
+            <ExecDrawerNodeRow
+                v-for="nodeRun in result?.nodes ?? []"
+                :key="nodeRun.nodeKey"
+                :node-run="nodeRun"
+                :status="statuses[nodeRun.nodeKey] ?? 'idle'"
+            />
 
-            <p
-                v-if="logs.length === 0"
-                class="text-muted-foreground py-1.5 font-sans"
-            >
-                Lancez <b>Exécuter</b> pour tester le graphe node par node —
-                simulation locale, aucune donnée réelle.
+            <p v-if="!result" class="text-muted-foreground py-1.5 font-sans">
+                Lancez <b>Tester</b> pour exécuter le graphe node par node avec
+                un input d'échantillon.
             </p>
         </div>
 
         <div
-            v-if="summary && !running"
-            class="bg-success-soft flex flex-none items-center gap-2.5 border-t px-4 py-2 text-[12.5px]"
+            v-if="result && !running"
+            class="flex flex-none items-center gap-2.5 border-t px-4 py-2 text-[12.5px]"
+            :class="
+                result.status === 'completed'
+                    ? 'bg-success-soft'
+                    : 'bg-danger-soft'
+            "
             data-test="exec-summary"
         >
-            <CircleCheck class="text-success h-[15px] w-[15px]" />
+            <CircleCheck
+                v-if="result.status === 'completed'"
+                class="text-success h-3.75 w-3.75"
+            />
+            <CircleX v-else class="text-destructive h-3.75 w-3.75" />
             <p>
-                <b>Succès</b> — {{ summary.nodes }} nodes ·
-                {{ (summary.durationMs / 1000).toFixed(1) }} s
+                <template v-if="result.status === 'completed'">
+                    <b>Succès</b> — {{ summaryMessage }}
+                </template>
+                <template v-else>
+                    <b>Échec</b> — {{ summaryMessage }}
+                </template>
             </p>
         </div>
     </div>

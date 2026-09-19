@@ -117,22 +117,58 @@ export type WorkflowGraphPayload = {
 /** Machine à états de la sauvegarde automatique du graphe. */
 export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
-/** Statut d'exécution d'un node pendant la simulation (A1 — run simulé, client-side uniquement). */
-export type NodeRunStatus = 'idle' | 'running' | 'ok' | 'error';
+/**
+ * Statut d'un node pendant le test du graphe (run réel, phase 4).
+ * `skipped` = node jamais exécuté (branche non prise, isolé, aval d'une
+ * sortie, après échec) — rendu à l'identique de la maquette : aspect repos.
+ */
+export type NodeRunStatus = 'idle' | 'running' | 'ok' | 'error' | 'skipped';
 
-/** Entrée horodatée du journal d'exécution (tiroir du builder). */
-export type SimulationLogEntry = {
-    /** Temps écoulé depuis le lancement, ex. « 1,42 s ». */
-    time: string;
-    /** Source du log (« système » ou libellé du type de node). */
-    source: string;
+/** Machine à états du test du workflow (composable `useWorkflowTestRun`). */
+export type TestRunState = 'idle' | 'running' | 'completed' | 'failed';
+
+/** Statut global d'un run renvoyé par le moteur (un échec de validation est un résultat, pas une erreur HTTP). */
+export type ExecutionStatus = 'completed' | 'failed';
+
+/**
+ * Erreur explicite du moteur — miroir du DTO `ExecutionError` PHP.
+ * `message` est un texte FR affichable : jamais de valeur de données.
+ */
+export type ExecutionErrorData = {
+    /** Node en cause ; `null` = erreur de graphe (aucun trigger, cycle…). */
+    nodeKey: string | null;
+    /** Type du node en cause, ou `validation` pour les erreurs de graphe. */
+    type: string;
+    /** Raison machine (`no_trigger`, `handler_missing`, `path_not_found`…). */
+    reason: string;
+    /** Message utilisateur en français. */
     message: string;
-    level: 'info' | 'ok' | 'error';
 };
 
-/** Résumé de fin de simulation. */
-export type SimulationSummary = {
-    ok: boolean;
-    nodes: number;
+/** Issue d'UN node dans un run de test — miroir du DTO `NodeRunResult` PHP. */
+export type NodeRunResult = {
+    nodeKey: string;
+    type: string;
+    name: string;
+    status: 'ok' | 'error' | 'skipped';
+    /** 0 si skipped. */
     durationMs: number;
+    /** Sortie réelle du node ; vide si skipped. */
+    output: Record<string, unknown>;
+    error: ExecutionErrorData | null;
+};
+
+/**
+ * Résultat complet d'un run de test — miroir du DTO `ExecutionResult` PHP,
+ * sérialisé tel quel par `POST workflows.test-run` (toujours 200).
+ * `nodes` contient TOUS les nodes du graphe dans l'ordre d'exécution,
+ * les non exécutés en fin de liste en `skipped`.
+ */
+export type ExecutionResult = {
+    status: ExecutionStatus;
+    /** Durée murale totale du run (validation incluse), en millisecondes. */
+    durationMs: number;
+    nodes: NodeRunResult[];
+    /** Erreurs de validation (run non démarré, `nodes` vide) ou du node en échec. */
+    errors: ExecutionErrorData[];
 };

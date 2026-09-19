@@ -16,12 +16,17 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import type { BuilderNode } from '@/composables/useWorkflowBuilder';
+import { formatNodeOutput } from '@/composables/useWorkflowTestRun';
 import {
     categoryPresentation,
     nodeCategoryExamples,
 } from '@/lib/nodeCategories';
 import { nodeIcon } from '@/lib/nodeIcons';
-import type { NodeTypeDefinition, WorkflowStatus } from '@/types';
+import type {
+    NodeRunResult,
+    NodeTypeDefinition,
+    WorkflowStatus,
+} from '@/types';
 
 const props = defineProps<{
     open: boolean;
@@ -29,6 +34,8 @@ const props = defineProps<{
     definition: NodeTypeDefinition | null;
     status: WorkflowStatus;
     canUpdateWorkflow?: boolean;
+    /** Résultat réel du node sélectionné au dernier test (`null` = pas de run). */
+    nodeResult: NodeRunResult | null;
 }>();
 
 const emit = defineEmits<{
@@ -89,9 +96,9 @@ const setRangeField = (fieldKey: string, event: Event): void => {
 };
 
 /*
- * Aperçus « entrées / sorties » : exemples de démonstration par catégorie
- * (maquette) — explicitement étiquetés « aperçu simulé » pour rester
- * honnêtes tant que le moteur d'exécution n'existe pas (phase 4).
+ * Aperçus « entrées » : exemples de démonstration par catégorie (maquette),
+ * explicitement étiquetés « aperçu simulé » — le moteur n'expose pas
+ * l'input par node (limitation documentée du contrat phase 4).
  */
 const previewJson = computed(() =>
     JSON.stringify(
@@ -101,6 +108,16 @@ const previewJson = computed(() =>
         null,
         2,
     ),
+);
+
+/*
+ * Sortie réelle du node sélectionné au dernier test, rendue en TEXTE
+ * (`formatNodeOutput`) — remplace l'aperçu simulé quand un run existe.
+ */
+const outputJson = computed(() =>
+    props.nodeResult && props.nodeResult.status !== 'skipped'
+        ? formatNodeOutput(props.nodeResult.output)
+        : '',
 );
 </script>
 
@@ -262,8 +279,8 @@ const previewJson = computed(() =>
                 </template>
             </div>
 
-            <!-- Onglets Entrées / Sorties : aperçus simulés (A1) -->
-            <div v-else class="flex flex-col gap-3 p-4">
+            <!-- Onglet Entrées : aperçu simulé (le moteur n'expose pas l'input par node) -->
+            <div v-else-if="tab === 'in'" class="flex flex-col gap-3 p-4">
                 <p class="text-muted-foreground text-xs">
                     Aperçu simulé — exemples de démonstration, sans exécution
                     réelle.
@@ -271,6 +288,57 @@ const previewJson = computed(() =>
                 <pre
                     class="bg-muted/60 overflow-x-auto rounded-md border p-3 font-mono text-[11px] leading-relaxed whitespace-pre"
                     >{{ previewJson }}</pre>
+                <Alert class="text-[12.5px]">
+                    <Braces />
+                    <AlertDescription>
+                        Référencez ces valeurs avec
+                        <code class="font-mono" v-pre>{{ node.variable }}</code>
+                        dans les nodes suivants.
+                    </AlertDescription>
+                </Alert>
+            </div>
+
+            <!-- Onglet Sorties : résultat réel du dernier test, sinon aperçu -->
+            <div v-else class="flex flex-col gap-3 p-4">
+                <template v-if="nodeResult">
+                    <p
+                        class="text-muted-foreground text-xs"
+                        data-test="inspector-real-output"
+                    >
+                        Résultat du dernier test
+                        <template v-if="nodeResult.status !== 'skipped'">
+                            — {{ nodeResult.durationMs }} ms
+                        </template>
+                    </p>
+                    <pre
+                        v-if="nodeResult.status !== 'skipped'"
+                        class="bg-muted/60 overflow-x-auto rounded-md border p-3 font-mono text-[11px] leading-relaxed whitespace-pre"
+                        >{{ outputJson }}</pre>
+                    <p
+                        v-else
+                        class="text-muted-foreground text-xs"
+                        data-test="inspector-skipped-output"
+                    >
+                        Node non exécuté pendant le test — branche non prise ou
+                        hors parcours.
+                    </p>
+                    <p
+                        v-if="nodeResult.error"
+                        class="text-destructive text-xs"
+                        data-test="inspector-node-error"
+                    >
+                        {{ nodeResult.error.message }}
+                    </p>
+                </template>
+                <template v-else>
+                    <p class="text-muted-foreground text-xs">
+                        Aperçu simulé — exemples de démonstration, sans
+                        exécution réelle.
+                    </p>
+                    <pre
+                        class="bg-muted/60 overflow-x-auto rounded-md border p-3 font-mono text-[11px] leading-relaxed whitespace-pre"
+                        >{{ previewJson }}</pre>
+                </template>
                 <Alert class="text-[12.5px]">
                     <Braces />
                     <AlertDescription>

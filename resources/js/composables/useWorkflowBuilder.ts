@@ -50,8 +50,8 @@ export type BuilderConnection = {
     sourceHandle: string | null;
 };
 
-/** Injection des états de simulation pour colorer nodes/arêtes sans couplage direct. */
-export type BuilderSimulationHooks = {
+/** Injection des états du run (test réel) pour colorer nodes/arêtes sans couplage direct. */
+export type BuilderRunHooks = {
     getNodeStatus?: (key: string) => NodeRunStatus;
     isEdgeFlowing?: (id: string) => boolean;
 };
@@ -166,7 +166,7 @@ export type UseWorkflowBuilderReturn = {
 export function useWorkflowBuilder(
     catalog: NodeTypeCatalog,
     graph: WorkflowGraph,
-    simulationHooks: BuilderSimulationHooks = {},
+    simulationHooks: BuilderRunHooks = {},
 ): UseWorkflowBuilderReturn {
     const initial = fromGraph(graph);
     const nodes = ref<BuilderNode[]>(initial.nodes);

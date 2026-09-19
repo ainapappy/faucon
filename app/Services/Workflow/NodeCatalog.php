@@ -14,7 +14,7 @@ use App\Enums\NodeCategory;
 final class NodeCatalog
 {
     /**
-     * The fourteen node type definitions (mirrors the builder mockup).
+     * The fifteen node type definitions (mirrors the builder mockup).
      *
      * Memoized once per request. PHP 8.4 does not allow `new` in class
      * constants or static property initializers, hence this lazy builder.
@@ -127,7 +127,9 @@ final class NodeCatalog
                     ['id' => 'false', 'label' => 'false', 'position' => 0.68],
                 ],
                 fields: [
-                    ['key' => 'expression', 'label' => 'Expression', 'type' => 'text', 'required' => false, 'placeholder' => '{{ ai.label }} == "lead"', 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => true],
+                    ['key' => 'expression', 'label' => 'Expression', 'type' => 'text', 'required' => false, 'placeholder' => '{{ trigger.label }}', 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => true],
+                    ['key' => 'operator', 'label' => 'Opérateur', 'type' => 'select', 'required' => false, 'placeholder' => null, 'options' => ['==', '!=', 'contains', 'empty'], 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
+                    ['key' => 'value', 'label' => 'Valeur', 'type' => 'text', 'required' => false, 'placeholder' => 'lead', 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
                 ],
             ),
             'logic.filter' => new NodeDefinition(
@@ -143,6 +145,16 @@ final class NodeCatalog
                 fields: [
                     ['key' => 'expression', 'label' => 'Condition d’inclusion', 'type' => 'text', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => true],
                 ],
+            ),
+            'data.output' => new NodeDefinition(
+                type: 'data.output',
+                category: NodeCategory::Data,
+                label: 'Sortie',
+                description: 'Termine le run et expose le résultat final',
+                icon: 'arrow-right-to-line',
+                input: true,
+                outputs: [],
+                fields: [],
             ),
             'ai.classification' => new NodeDefinition(
                 type: 'ai.classification',

@@ -318,7 +318,7 @@ describe('useWorkflowBuilder', () => {
         expect(node.positionY).toBe(87);
     });
 
-    it('expose des shapes vue-flow avec statut de simulation et label de branche', () => {
+    it('expose des shapes vue-flow avec statut d’exécution et label de branche', () => {
         const builder = useWorkflowBuilder(catalog, buildGraph(), {
             getNodeStatus: (key) => (key === 'n1' ? 'running' : 'idle'),
             isEdgeFlowing: (id) => id === '11',

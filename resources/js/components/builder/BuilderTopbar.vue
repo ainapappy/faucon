@@ -173,7 +173,7 @@ const saveLabel = computed(() => {
             >
                 <Spinner v-if="running" class="h-3.5 w-3.5" />
                 <Play v-else class="h-3.5 w-3.5" />
-                {{ running ? 'En cours…' : 'Exécuter' }}
+                {{ running ? 'En cours…' : 'Tester' }}
             </Button>
         </div>
     </header>

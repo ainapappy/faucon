@@ -3,7 +3,7 @@ import { defineConfig } from 'vitest/config';
 
 /*
  * Configuration des specs Vitest des composables front (graphe du builder,
- * sauvegarde debouncée, simulation d'exécution). Hors build applicatif :
+ * sauvegarde debouncée, test d'exécution). Hors build applicatif :
  * ce fichier et les specs sont exclus du tsconfig (npm run types:check),
  * l'outillage de test JS n'est pas encore une dépendance persistée.
  *

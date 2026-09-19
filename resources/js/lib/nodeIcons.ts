@@ -7,6 +7,7 @@
  */
 import type { Component } from 'vue';
 import {
+    ArrowRightToLine,
     Bot,
     Braces,
     CalendarClock,
@@ -31,6 +32,7 @@ const nodeIcons: Record<string, Component<LucideProps>> = {
     braces: Braces,
     shuffle: Shuffle,
     globe: Globe,
+    'arrow-right-to-line': ArrowRightToLine,
     'git-branch': GitBranch,
     filter: Filter,
     bot: Bot,
