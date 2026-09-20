@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Workflows;
 
 use App\Actions\Workflows\CreateWorkflow;
-use App\Actions\Workflows\DuplicateWorkflow;
 use App\Data\Workflow\NodeDefinition;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Workflows\CreateWorkflowRequest;
@@ -12,7 +11,9 @@ use App\Models\Team;
 use App\Models\Workflow;
 use App\Models\WorkflowEdge;
 use App\Models\WorkflowNode;
+use App\Models\WorkflowTemplate;
 use App\Services\Workflow\NodeCatalog;
+use App\Services\Workflow\WorkflowTemplater;
 use App\Support\IntegrationSummaries;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -42,6 +43,13 @@ class WorkflowController extends Controller
             'workflows' => $workflows,
             'nodeTypes' => $this->nodeTypes(),
             'permissions' => $request->user()->toTeamPermissions($currentTeam),
+            'templateCategories' => WorkflowTemplate::query()
+                ->visibleFor($currentTeam)
+                ->get()
+                ->pluck('category')
+                ->unique()
+                ->values()
+                ->all(),
         ]);
     }
 
@@ -138,13 +146,13 @@ class WorkflowController extends Controller
     /**
      * Duplicate the specified workflow as a draft copy.
      */
-    public function duplicate(Request $request, Team $currentTeam, string $workflow, DuplicateWorkflow $duplicateWorkflow): RedirectResponse
+    public function duplicate(Request $request, Team $currentTeam, string $workflow, WorkflowTemplater $templater): RedirectResponse
     {
         $model = $this->findWorkflow($currentTeam, $workflow);
 
         Gate::authorize('duplicate', $model);
 
-        $duplicateWorkflow->handle($request->user(), $model);
+        $templater->duplicate($model, $request->user());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Workflow duplicated.')]);
 

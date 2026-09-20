@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Form } from '@inertiajs/vue3';
-import { Plus } from '@lucide/vue';
-import { ref } from 'vue';
+import { Form, Link, usePage } from '@inertiajs/vue3';
+import { ArrowUpRight, Layers, Plus } from '@lucide/vue';
+import { computed, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,31 +16,26 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { index as templatesIndex } from '@/routes/templates';
 import { store } from '@/routes/workflows';
 
 /*
- * Templates statiques (amendement A2) : présents pour rester fidèles à la
- * maquette mais sans influence sur la création — le graphe naît toujours
- * vide ; les templates réels arrivent en phase 9.
+ * Création de workflow (maquette workflows.html, amendement A1 validé) : un
+ * seul chemin d'instanciation des templates — la galerie. Le lien remplace
+ * l'ancien select statique ; la création reste un graphe vide, choisir un
+ * modèle se fait sur un aperçu visuel dans la galerie.
  */
-const templates = [
-    { value: 'blank', label: 'Griffe vide (déclencheur manuel)' },
-    { value: 'support-ia', label: 'Support client IA' },
-    { value: 'veille', label: 'Veille de marché' },
-    { value: 'onboarding-lead', label: 'Onboarding lead' },
-];
+const page = usePage();
+
+const templatesUrl = computed(
+    () =>
+        templatesIndex({ current_team: page.props.currentTeam?.slug ?? '' })
+            .url,
+);
 
 const open = ref(false);
 const formKey = ref(0);
-const template = ref(templates[0]?.value ?? 'blank');
 
 function handleOpenChange(value: boolean) {
     open.value = value;
@@ -100,27 +95,25 @@ function handleOpenChange(value: boolean) {
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="workflow-template">Partir d'un template</Label>
-                    <Select v-model="template">
-                        <SelectTrigger
-                            id="workflow-template"
-                            data-test="create-workflow-template"
+                    <Label>Partir d'un template</Label>
+                    <Button
+                        variant="outline"
+                        as-child
+                        data-test="create-workflow-templates-link"
+                    >
+                        <Link
+                            :href="templatesUrl"
+                            class="justify-start"
+                            prefetch
                         >
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem
-                                v-for="item in templates"
-                                :key="item.value"
-                                :value="item.value"
-                            >
-                                {{ item.label }}
-                            </SelectItem>
-                        </SelectContent>
-                    </Select>
+                            <Layers class="h-4 w-4" />
+                            Parcourir les templates
+                            <ArrowUpRight class="ml-auto h-3.5 w-3.5" />
+                        </Link>
+                    </Button>
                     <p class="text-muted-foreground text-xs">
-                        Les templates arrivent bientôt — la création reste un
-                        graphe vide.
+                        Choisissez un modèle dans la galerie — son graphe est
+                        dupliqué dans votre équipe, tout reste éditable.
                     </p>
                 </div>
 

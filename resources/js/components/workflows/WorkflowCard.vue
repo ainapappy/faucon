@@ -9,6 +9,7 @@ import {
     GitBranch,
     Play,
     Trash2,
+    Upload,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Switch } from '@/components/ui/switch';
 import { triggerPresentation } from '@/lib/nodeCategories';
-import { edit, duplicate } from '@/routes/workflows';
+import { edit } from '@/routes/workflows';
 import type { NodeTypeCatalog, WorkflowListItem } from '@/types';
 
 const props = defineProps<{
@@ -35,6 +36,8 @@ const props = defineProps<{
 const emit = defineEmits<{
     toggle: [];
     run: [];
+    duplicate: [];
+    publish: [];
     remove: [];
 }>();
 
@@ -45,12 +48,6 @@ const teamSlug = computed(() => page.props.currentTeam?.slug ?? '');
 const editUrl = computed(
     () =>
         edit({ current_team: teamSlug.value, workflow: props.workflow.id }).url,
-);
-
-const duplicateUrl = computed(
-    () =>
-        duplicate({ current_team: teamSlug.value, workflow: props.workflow.id })
-            .url,
 );
 
 const trigger = computed(() =>
@@ -125,17 +122,17 @@ const iconStyle = computed(() => ({
                         <Play class="h-4 w-4" /> Exécuter maintenant
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                        v-if="canUpdateWorkflow"
-                        as-child
                         :disabled="busy"
+                        @select="emit('duplicate')"
                     >
-                        <Link
-                            :href="duplicateUrl"
-                            method="post"
-                            class="flex items-center gap-2"
-                        >
-                            <Copy class="h-4 w-4" /> Dupliquer
-                        </Link>
+                        <Copy class="h-4 w-4" /> Dupliquer
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                        v-if="canUpdateWorkflow"
+                        :disabled="busy"
+                        @select="emit('publish')"
+                    >
+                        <Upload class="h-4 w-4" /> Publier comme template
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem

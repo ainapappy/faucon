@@ -11,6 +11,7 @@ import ExecDrawer from '@/components/builder/ExecDrawer.vue';
 import NodeInspector from '@/components/builder/NodeInspector.vue';
 import NodePalette from '@/components/builder/NodePalette.vue';
 import TestRunDialog from '@/components/builder/TestRunDialog.vue';
+import PublishTemplateDialog from '@/components/workflows/PublishTemplateDialog.vue';
 import { Button } from '@/components/ui/button';
 import {
     useWorkflowBuilder,
@@ -321,6 +322,22 @@ async function goBack(): Promise<void> {
     router.visit(workflowsIndex({ current_team: teamSlug.value }).url);
 }
 
+/* ---- Publication en template (phase 9) ---- */
+const publishDialogOpen = ref(false);
+
+/*
+ * Ouverture de la modal de publication : flush OBLIGATOIRE avant — sinon le
+ * snapshot partirait d'un graphe autosave non poussé (piège D11). Un échec
+ * de flush (toast « Enregistrement impossible » déjà servi par le saver)
+ * n'ouvre pas la modal : on ne publie jamais un graphe périmé.
+ */
+async function openPublishDialog(): Promise<void> {
+    const saved = await saver.flush();
+    if (saved) {
+        publishDialogOpen.value = true;
+    }
+}
+
 /* ---- Test réel du workflow (phase 4, U2) : modale d'échantillon → run ---- */
 const testRunHttp = useHttp<{ input: string }, ExecutionResult>({ input: '' });
 
@@ -553,6 +570,7 @@ onBeforeUnmount(() => {
             @back="goBack"
             @run="openTestDialog"
             @execute="executeWorkflow"
+            @publish="openPublishDialog"
             @zoom-in="() => zoomIn()"
             @zoom-out="() => zoomOut()"
             @fit-view="() => fitView()"
@@ -619,6 +637,13 @@ onBeforeUnmount(() => {
             :sample-input="defaultSampleInput"
             :launching="testRun.state.value === 'running'"
             @launch="launchTest"
+        />
+
+        <!-- Modale « Publier comme template » : le graphe vient d'être flushé (D11). -->
+        <PublishTemplateDialog
+            :open="publishDialogOpen"
+            :workflow="workflow"
+            @update:open="publishDialogOpen = $event"
         />
 
         <!-- Bouton thème : le builder est plein écran, hors shell à sidebar -->

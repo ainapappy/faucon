@@ -10,6 +10,7 @@ import {
     PlayCircle,
     Plus,
     Terminal,
+    Upload,
     Workflow,
 } from '@lucide/vue';
 import { computed } from 'vue';
@@ -36,6 +37,7 @@ const emit = defineEmits<{
     back: [];
     run: [];
     execute: [];
+    publish: [];
     zoomIn: [];
     zoomOut: [];
     fitView: [];
@@ -164,6 +166,17 @@ const saveLabel = computed(() => {
                 @click="emit('toggleJournal')"
             >
                 <Terminal class="h-4 w-4" />
+            </Button>
+
+            <Button
+                v-if="canUpdateWorkflow"
+                variant="outline"
+                data-test="builder-publish"
+                aria-label="Publier ce workflow comme template d'équipe"
+                @click="emit('publish')"
+            >
+                <Upload class="h-3.5 w-3.5" />
+                Publier
             </Button>
 
             <Button

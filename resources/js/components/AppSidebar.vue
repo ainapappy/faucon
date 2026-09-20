@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid, Workflow } from '@lucide/vue';
+import {
+    BookOpen,
+    FolderGit2,
+    Layers,
+    LayoutGrid,
+    Workflow,
+} from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -17,6 +23,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as templatesIndex } from '@/routes/templates';
 import { index as workflowsIndex } from '@/routes/workflows';
 import type { NavItem } from '@/types';
 
@@ -32,6 +39,12 @@ const workflowsUrl = computed(() =>
         : '/',
 );
 
+const templatesUrl = computed(() =>
+    page.props.currentTeam
+        ? templatesIndex({ current_team: page.props.currentTeam.slug }).url
+        : '/',
+);
+
 const mainNavItems = computed<NavItem[]>(() => [
     {
         title: 'Dashboard',
@@ -42,6 +55,11 @@ const mainNavItems = computed<NavItem[]>(() => [
         title: 'Workflows',
         href: workflowsUrl.value,
         icon: Workflow,
+    },
+    {
+        title: 'Templates',
+        href: templatesUrl.value,
+        icon: Layers,
     },
 ]);
 

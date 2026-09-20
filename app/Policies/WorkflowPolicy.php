@@ -56,4 +56,15 @@ class WorkflowPolicy
     {
         return $user->hasTeamPermission($workflow->team, TeamPermission::WorkflowCreate);
     }
+
+    /**
+     * Determine whether the user can publish the workflow as a team
+     * template (phase 9): same semantics as update — the publication is a
+     * mutation of the workflow's reachable surface. Dedicated method rather
+     * than reusing update: named intent, testable alone.
+     */
+    public function publish(User $user, Workflow $workflow): bool
+    {
+        return $user->hasTeamPermission($workflow->team, TeamPermission::WorkflowUpdate);
+    }
 }

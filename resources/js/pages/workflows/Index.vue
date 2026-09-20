@@ -5,6 +5,8 @@ import { computed, ref } from 'vue';
 import { toast } from 'vue-sonner';
 import Heading from '@/components/Heading.vue';
 import CreateWorkflowDialog from '@/components/workflows/CreateWorkflowDialog.vue';
+import DuplicateWorkflowDialog from '@/components/workflows/DuplicateWorkflowDialog.vue';
+import PublishTemplateDialog from '@/components/workflows/PublishTemplateDialog.vue';
 import WorkflowCard from '@/components/workflows/WorkflowCard.vue';
 import WorkflowTable from '@/components/workflows/WorkflowTable.vue';
 import WorkflowToolbar from '@/components/workflows/WorkflowToolbar.vue';
@@ -25,6 +27,8 @@ import type {
 type Props = {
     workflows: WorkflowListItem[];
     nodeTypes: NodeTypeCatalog;
+    /** Catégories distinctes des templates visibles — suggestions de publication. */
+    templateCategories: string[];
     permissions: {
         canCreateWorkflow: boolean;
         canUpdateWorkflow: boolean;
@@ -160,7 +164,23 @@ function remove(workflow: WorkflowListItem): void {
     );
 }
 
-/** Import JSON : informatif uniquement — l'import réel est phase 9 (A2). */
+/* ---- Duplication (confirmation) et publication en template (phase 9) ---- */
+const duplicatingWorkflow = ref<WorkflowListItem | null>(null);
+const duplicateDialogOpen = ref(false);
+const publishingWorkflow = ref<WorkflowListItem | null>(null);
+const publishDialogOpen = ref(false);
+
+function openDuplicate(workflow: WorkflowListItem): void {
+    duplicatingWorkflow.value = workflow;
+    duplicateDialogOpen.value = true;
+}
+
+function openPublish(workflow: WorkflowListItem): void {
+    publishingWorkflow.value = workflow;
+    publishDialogOpen.value = true;
+}
+
+/** Import JSON : informatif uniquement — l'import de fichiers n'est pas implémenté. */
 function notifyImport(): void {
     toast.info('Import', {
         description:
@@ -239,6 +259,8 @@ function notifyImport(): void {
                 :can-delete-workflow="permissions.canDeleteWorkflow"
                 @toggle="list.toggle(workflow)"
                 @run="runNow(workflow)"
+                @duplicate="openDuplicate(workflow)"
+                @publish="openPublish(workflow)"
                 @remove="remove(workflow)"
             />
         </div>
@@ -252,4 +274,19 @@ function notifyImport(): void {
             @toggle="list.toggle"
         />
     </div>
+
+    <!-- Duplication : confirmation avant la visite POST (A3) ; toast servi par le contrôleur. -->
+    <DuplicateWorkflowDialog
+        :open="duplicateDialogOpen"
+        :workflow="duplicatingWorkflow"
+        @update:open="duplicateDialogOpen = $event"
+    />
+
+    <!-- Publication en template : suggestions = catégories des templates visibles (D11). -->
+    <PublishTemplateDialog
+        :open="publishDialogOpen"
+        :workflow="publishingWorkflow"
+        :categories="templateCategories"
+        @update:open="publishDialogOpen = $event"
+    />
 </template>

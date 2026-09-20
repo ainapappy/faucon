@@ -3,5 +3,6 @@ export * from './executions';
 export * from './integrations';
 export * from './navigation';
 export * from './teams';
+export * from './templates';
 export * from './ui';
 export * from './workflows';

@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             DemoWorkflowSeeder::class,
             DemoWorkflowExecutionSeeder::class,
             DemoIntegrationSeeder::class,
+            TemplateSeeder::class,
         ]);
 
         $this->command->info('');

@@ -4,6 +4,9 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Integrations\IntegrationController;
 use App\Http\Controllers\Integrations\TestIntegrationConnectionController;
 use App\Http\Controllers\Teams\TeamInvitationController;
+use App\Http\Controllers\Templates\UseWorkflowTemplateController;
+use App\Http\Controllers\Templates\WorkflowTemplateController;
+use App\Http\Controllers\Workflows\PublishWorkflowTemplateController;
 use App\Http\Controllers\Workflows\RegenerateWebhookTokenController;
 use App\Http\Controllers\Workflows\RunWorkflowController;
 use App\Http\Controllers\Workflows\SaveWorkflowGraphController;
@@ -29,9 +32,13 @@ Route::prefix('{current_team}')
         Route::patch('workflows/{workflow}', [WorkflowController::class, 'update'])->name('workflows.update');
         Route::delete('workflows/{workflow}', [WorkflowController::class, 'destroy'])->name('workflows.destroy');
         Route::post('workflows/{workflow}/duplicate', [WorkflowController::class, 'duplicate'])->name('workflows.duplicate');
+        Route::post('workflows/{workflow}/publish', PublishWorkflowTemplateController::class)->name('workflows.publish');
         Route::put('workflows/{workflow}/graph', SaveWorkflowGraphController::class)->name('workflows.graph.update');
         Route::post('workflows/{workflow}/test-run', TestRunWorkflowController::class)->name('workflows.test-run');
         Route::post('workflows/{workflow}/run', RunWorkflowController::class)->name('workflows.run');
+
+        Route::get('templates', [WorkflowTemplateController::class, 'index'])->name('templates.index');
+        Route::post('templates/{template}/use', UseWorkflowTemplateController::class)->name('templates.use');
 
         Route::get('workflow-executions', [WorkflowExecutionController::class, 'index'])->name('workflow-executions.index');
         Route::post('workflow-executions/{execution}/cancel', CancelWorkflowExecutionController::class)->name('workflow-executions.cancel');
