@@ -15,10 +15,13 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import AiInspectorSection from '@/components/builder/AiInspectorSection.vue';
+import AiUsageBadge from '@/components/builder/AiUsageBadge.vue';
 import WebhookInspectorSection from '@/components/builder/WebhookInspectorSection.vue';
 import TextLink from '@/components/TextLink.vue';
 import type { BuilderNode } from '@/composables/useWorkflowBuilder';
 import { formatNodeOutput } from '@/composables/useWorkflowTestRun';
+import { isAiNodeType } from '@/lib/aiVariables';
 import {
     categoryPresentation,
     nodeCategoryExamples,
@@ -45,6 +48,8 @@ const props = defineProps<{
     integrations: IntegrationSummary[];
     /** Workflow édité — endpoints webhook de la section dédiée (D20). */
     workflowId: number;
+    /** Chemins interpolables des ancêtres du node (aide-mémoire IA, phase 6). */
+    upstreamVariables?: string[];
 }>();
 
 const emit = defineEmits<{
@@ -86,6 +91,13 @@ const colorToken = computed(
 const isWebhookNode = computed(
     () => props.definition?.type === 'trigger.webhook',
 );
+
+/*
+ * Section IA dédiée (phase 6) : détection par SEGMENT de catégorie (`ai.*`)
+ * et non par liste de types — les modes viennent du catalogue, le front n'en
+ * garde aucune liste.
+ */
+const isAiNode = computed(() => isAiNodeType(props.definition?.type ?? ''));
 
 const configOf = (fieldKey: string): string | number => {
     const value = props.node?.config[fieldKey];
@@ -354,6 +366,13 @@ const outputJson = computed(() =>
                     :can-update-workflow="canUpdateWorkflow ?? false"
                 />
 
+                <!-- Section IA dédiée (phase 6) : aide-mémoire variables + hints du mode -->
+                <AiInspectorSection
+                    v-if="isAiNode && definition"
+                    :definition="definition"
+                    :upstream-variables="upstreamVariables ?? []"
+                />
+
                 <template v-if="canUpdateWorkflow">
                     <Separator />
                     <Button
@@ -399,6 +418,8 @@ const outputJson = computed(() =>
                             — {{ nodeResult.durationMs }} ms
                         </template>
                     </p>
+                    <!-- Usage tokens des nodes IA (clé usage de la sortie, V10) -->
+                    <AiUsageBadge :output="nodeResult.output" />
                     <pre
                         v-if="nodeResult.status !== 'skipped'"
                         class="bg-muted/60 overflow-x-auto rounded-md border p-3 font-mono text-[11px] leading-relaxed whitespace-pre"

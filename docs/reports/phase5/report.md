@@ -77,16 +77,16 @@ Tests (créés d'abord, Red → Green par lot) :
 
 ### Routes
 
-| Méthode | URI | Nom | Protection |
-| --- | --- | --- | --- |
-| GET | `{current_team}/settings/integrations` | `integrations.index` | auth + membership |
-| POST | `{current_team}/settings/integrations` | `integrations.store` | Policy `create` |
-| PATCH | `{current_team}/settings/integrations/{integration}` | `integrations.update` | Policy `update` |
-| DELETE | `{current_team}/settings/integrations/{integration}` | `integrations.destroy` | Policy `delete` |
-| POST | `{current_team}/settings/integrations/{integration}/test` | `integrations.test` | Policy `test` (= update) |
-| GET | `{current_team}/workflows/{workflow}/webhook-url` | `workflows.webhook.url` | Policy `view` |
-| POST | `{current_team}/workflows/{workflow}/webhook-regenerate` | `workflows.webhook.regenerate` | Policy `update` |
-| POST | `/webhooks/{token}` | `webhooks.handle` | **public** — `throttle:webhooks`, CSRF except `webhooks/*` |
+| Méthode | URI                                                       | Nom                            | Protection                                                 |
+| ------- | --------------------------------------------------------- | ------------------------------ | ---------------------------------------------------------- |
+| GET     | `{current_team}/settings/integrations`                    | `integrations.index`           | auth + membership                                          |
+| POST    | `{current_team}/settings/integrations`                    | `integrations.store`           | Policy `create`                                            |
+| PATCH   | `{current_team}/settings/integrations/{integration}`      | `integrations.update`          | Policy `update`                                            |
+| DELETE  | `{current_team}/settings/integrations/{integration}`      | `integrations.destroy`         | Policy `delete`                                            |
+| POST    | `{current_team}/settings/integrations/{integration}/test` | `integrations.test`            | Policy `test` (= update)                                   |
+| GET     | `{current_team}/workflows/{workflow}/webhook-url`         | `workflows.webhook.url`        | Policy `view`                                              |
+| POST    | `{current_team}/workflows/{workflow}/webhook-regenerate`  | `workflows.webhook.regenerate` | Policy `update`                                            |
+| POST    | `/webhooks/{token}`                                       | `webhooks.handle`              | **public** — `throttle:webhooks`, CSRF except `webhooks/*` |
 
 `php artisan wayfinder:generate --with-form` exécuté après chaque évolution de routes ; le front n'a aucune URL en dur.
 

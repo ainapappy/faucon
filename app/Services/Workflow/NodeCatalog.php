@@ -14,10 +14,12 @@ use App\Enums\NodeCategory;
 final class NodeCatalog
 {
     /**
-     * The fifteen node type definitions (mirrors the builder mockup).
+     * The seventeen node type definitions (mirrors the builder mockup).
      *
-     * Memoized once per request. PHP 8.4 does not allow `new` in class
-     * constants or static property initializers, hence this lazy builder.
+     * Memoized once per request — the AI model options read the config at
+     * build time, hence the flush() escape hatch for config changes.
+     * PHP 8.4 does not allow `new` in class constants or static property
+     * initializers, hence this lazy builder.
      *
      * @var array<string, NodeDefinition>|null
      */
@@ -30,7 +32,11 @@ final class NodeCatalog
      */
     private static function definitions(): array
     {
-        return self::$definitions ??= [
+        if (self::$definitions !== null) {
+            return self::$definitions;
+        }
+
+        $definitions = [
             'trigger.webhook' => new NodeDefinition(
                 type: 'trigger.webhook',
                 category: NodeCategory::Trigger,
@@ -138,6 +144,23 @@ final class NodeCatalog
                 outputs: [],
                 fields: [],
             ),
+            'ai.prompt' => new NodeDefinition(
+                type: 'ai.prompt',
+                category: NodeCategory::Ai,
+                label: 'Prompt',
+                description: 'Interroge un modèle IA avec un prompt libre',
+                icon: 'pen-line',
+                input: true,
+                outputs: [
+                    ['id' => 'out', 'label' => null, 'position' => 0.5],
+                ],
+                fields: [
+                    ['key' => 'model', 'label' => 'Modèle', 'type' => 'select', 'required' => false, 'placeholder' => null, 'options' => self::aiModelOptions(), 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
+                    ['key' => 'prompt', 'label' => 'Prompt', 'type' => 'textarea', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
+                    ['key' => 'temperature', 'label' => 'Température', 'type' => 'range', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => 0.0, 'max' => 1.0, 'step' => 0.1, 'mono' => false],
+                    ['key' => 'max_tokens', 'label' => 'Max tokens', 'type' => 'text', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => true],
+                ],
+            ),
             'ai.classification' => new NodeDefinition(
                 type: 'ai.classification',
                 category: NodeCategory::Ai,
@@ -149,9 +172,46 @@ final class NodeCatalog
                     ['id' => 'out', 'label' => null, 'position' => 0.5],
                 ],
                 fields: [
-                    ['key' => 'model', 'label' => 'Modèle', 'type' => 'select', 'required' => false, 'placeholder' => null, 'options' => ['gpt-4o-mini', 'claude-haiku', 'claude-sonnet'], 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
-                    ['key' => 'prompt', 'label' => 'Prompt', 'type' => 'textarea', 'required' => false, 'placeholder' => 'Classe ce message parmi…', 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
+                    ['key' => 'model', 'label' => 'Modèle', 'type' => 'select', 'required' => false, 'placeholder' => null, 'options' => self::aiModelOptions(), 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
+                    ['key' => 'prompt', 'label' => 'Prompt', 'type' => 'textarea', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
                     ['key' => 'labels', 'label' => 'Étiquettes', 'type' => 'text', 'required' => false, 'placeholder' => 'lead, spam, question', 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => true],
+                    ['key' => 'temperature', 'label' => 'Température', 'type' => 'range', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => 0.0, 'max' => 1.0, 'step' => 0.1, 'mono' => false],
+                    ['key' => 'max_tokens', 'label' => 'Max tokens', 'type' => 'text', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => true],
+                ],
+            ),
+            'ai.extraction' => new NodeDefinition(
+                type: 'ai.extraction',
+                category: NodeCategory::Ai,
+                label: 'Extraction',
+                description: 'Extrait des champs structurés (JSON) d’un contenu',
+                icon: 'scan-text',
+                input: true,
+                outputs: [
+                    ['id' => 'out', 'label' => null, 'position' => 0.5],
+                ],
+                fields: [
+                    ['key' => 'model', 'label' => 'Modèle', 'type' => 'select', 'required' => false, 'placeholder' => null, 'options' => self::aiModelOptions(), 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
+                    ['key' => 'prompt', 'label' => 'Contenu à analyser', 'type' => 'textarea', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
+                    ['key' => 'fields', 'label' => 'Champs (Clé: type, une par ligne)', 'type' => 'textarea', 'required' => false, 'placeholder' => "nom: text\nmontant: number", 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => true],
+                    ['key' => 'temperature', 'label' => 'Température', 'type' => 'range', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => 0.0, 'max' => 1.0, 'step' => 0.1, 'mono' => false],
+                    ['key' => 'max_tokens', 'label' => 'Max tokens', 'type' => 'text', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => true],
+                ],
+            ),
+            'ai.summarization' => new NodeDefinition(
+                type: 'ai.summarization',
+                category: NodeCategory::Ai,
+                label: 'Résumé',
+                description: 'Condense un contenu long',
+                icon: 'file-text',
+                input: true,
+                outputs: [
+                    ['id' => 'out', 'label' => null, 'position' => 0.5],
+                ],
+                fields: [
+                    ['key' => 'model', 'label' => 'Modèle', 'type' => 'select', 'required' => false, 'placeholder' => null, 'options' => self::aiModelOptions(), 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
+                    ['key' => 'prompt', 'label' => 'Consigne', 'type' => 'textarea', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
+                    ['key' => 'temperature', 'label' => 'Température', 'type' => 'range', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => 0.0, 'max' => 1.0, 'step' => 0.1, 'mono' => false],
+                    ['key' => 'max_tokens', 'label' => 'Max tokens', 'type' => 'text', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => true],
                 ],
             ),
             'ai.generation' => new NodeDefinition(
@@ -165,24 +225,10 @@ final class NodeCatalog
                     ['id' => 'out', 'label' => null, 'position' => 0.5],
                 ],
                 fields: [
-                    ['key' => 'model', 'label' => 'Modèle', 'type' => 'select', 'required' => false, 'placeholder' => null, 'options' => ['gpt-4o', 'claude-sonnet', 'claude-haiku'], 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
-                    ['key' => 'prompt', 'label' => 'Prompt', 'type' => 'textarea', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
+                    ['key' => 'model', 'label' => 'Modèle', 'type' => 'select', 'required' => false, 'placeholder' => null, 'options' => self::aiModelOptions(), 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
+                    ['key' => 'prompt', 'label' => 'Instructions', 'type' => 'textarea', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
                     ['key' => 'temperature', 'label' => 'Température', 'type' => 'range', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => 0.0, 'max' => 1.0, 'step' => 0.1, 'mono' => false],
-                ],
-            ),
-            'ai.summary' => new NodeDefinition(
-                type: 'ai.summary',
-                category: NodeCategory::Ai,
-                label: 'Résumé',
-                description: 'Condense un contenu long',
-                icon: 'file-text',
-                input: true,
-                outputs: [
-                    ['id' => 'out', 'label' => null, 'position' => 0.5],
-                ],
-                fields: [
-                    ['key' => 'model', 'label' => 'Modèle', 'type' => 'select', 'required' => false, 'placeholder' => null, 'options' => ['gpt-4o-mini', 'claude-haiku'], 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
-                    ['key' => 'prompt', 'label' => 'Consigne', 'type' => 'textarea', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
+                    ['key' => 'max_tokens', 'label' => 'Max tokens', 'type' => 'text', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => true],
                 ],
             ),
             'action.http' => new NodeDefinition(
@@ -247,6 +293,46 @@ final class NodeCatalog
                 ],
             ),
         ];
+
+        return self::$definitions = $definitions;
+    }
+
+    /**
+     * Reset the memoized definitions so the next read rebuilds them from
+     * the current config. Required by tests that change `ai.providers…`;
+     * long-lived workers (phase 7) will rebuild once per process.
+     */
+    public static function flush(): void
+    {
+        self::$definitions = null;
+    }
+
+    /**
+     * Flatten the AI providers config to composite `provider/model` select
+     * options (V6): enabled providers only, config order (fake first, V7).
+     * Ids only — an API key can never leak into the builder (V12).
+     *
+     * @return list<string>
+     */
+    public static function aiModelOptions(): array
+    {
+        $options = [];
+
+        foreach ((array) config('ai.providers', []) as $providerId => $provider) {
+            if (! is_array($provider) || ! ($provider['enabled'] ?? false)) {
+                continue;
+            }
+
+            $providerId = (string) $providerId;
+
+            foreach ((array) ($provider['models'] ?? []) as $model) {
+                if (is_string($model) && $model !== '') {
+                    $options[] = $providerId.'/'.$model;
+                }
+            }
+        }
+
+        return $options;
     }
 
     /**

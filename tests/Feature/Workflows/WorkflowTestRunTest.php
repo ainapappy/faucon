@@ -113,7 +113,7 @@ test('a workflow containing a handlerless type returns 200 with handler_missing'
         ->putJson(route('workflows.graph.update', ['current_team' => $team->slug, 'workflow' => $workflow->id]), graphPayload(
             nodes: [
                 ['key' => 'n1', 'type' => 'trigger.manual'],
-                ['key' => 'n2', 'type' => 'ai.summary'],
+                ['key' => 'n2', 'type' => 'action.delay'],
             ],
             edges: [['source' => 'n1', 'target' => 'n2']],
         ))
@@ -129,8 +129,8 @@ test('a workflow containing a handlerless type returns 200 with handler_missing'
     expect($payload['status'])->toBe('failed')
         ->and($payload['errors'][0]['reason'])->toBe('handler_missing')
         ->and($payload['errors'][0]['nodeKey'])->toBe('n2')
-        ->and($payload['errors'][0]['type'])->toBe('ai.summary')
-        ->and($payload['errors'][0]['message'])->toContain('ai.summary');
+        ->and($payload['errors'][0]['type'])->toBe('action.delay')
+        ->and($payload['errors'][0]['message'])->toContain('action.delay');
 });
 
 test('a malformed JSON input is rejected with 422 on the input key', function () {

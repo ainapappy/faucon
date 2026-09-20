@@ -7,6 +7,7 @@ import {
     Minus,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import AiUsageBadge from '@/components/builder/AiUsageBadge.vue';
 import { Spinner } from '@/components/ui/spinner';
 import { formatNodeOutput } from '@/composables/useWorkflowTestRun';
 import type { NodeRunResult, NodeRunStatus } from '@/types';
@@ -135,6 +136,8 @@ const showDuration = computed(
                 />
                 Sortie
             </button>
+            <!-- Usage tokens des nodes IA (clé usage de la sortie, V10) -->
+            <AiUsageBadge :output="nodeRun.output" class="mt-1" />
             <pre
                 v-if="outputOpen"
                 class="bg-muted/60 mt-1 overflow-x-auto rounded-md border p-2 font-mono text-[10.5px] leading-relaxed whitespace-pre"

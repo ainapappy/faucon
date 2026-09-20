@@ -2,8 +2,11 @@
 
 namespace App\Providers;
 
+use App\Services\Ai\AiProviderManager;
 use App\Services\Workflow\Handlers\Action\EmailHandler;
 use App\Services\Workflow\Handlers\Action\HttpHandler;
+use App\Services\Workflow\Handlers\Ai\AiMode;
+use App\Services\Workflow\Handlers\Ai\AiNodeHandler;
 use App\Services\Workflow\Handlers\Data\InputHandler;
 use App\Services\Workflow\Handlers\Data\OutputHandler;
 use App\Services\Workflow\Handlers\Data\TransformHandler;
@@ -27,6 +30,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->singleton(AiProviderManager::class);
+
         $this->app->singleton(NodeHandlerRegistry::class, function (): NodeHandlerRegistry {
             $registry = new NodeHandlerRegistry;
             $registry->register($this->app->make(ManualHandler::class));
@@ -37,6 +42,10 @@ class AppServiceProvider extends ServiceProvider
             $registry->register($this->app->make(HttpHandler::class));
             $registry->register($this->app->make(EmailHandler::class));
             $registry->register($this->app->make(WebhookHandler::class));
+
+            foreach (AiMode::cases() as $mode) {
+                $registry->register($this->app->make(AiNodeHandler::class, ['mode' => $mode]));
+            }
 
             return $registry;
         });

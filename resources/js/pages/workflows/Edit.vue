@@ -27,6 +27,7 @@ import {
     useWorkflowTestRun,
     type UseWorkflowTestRunReturn,
 } from '@/composables/useWorkflowTestRun';
+import { upstreamVariablePaths } from '@/lib/aiVariables';
 import workflows, { index as workflowsIndex } from '@/routes/workflows';
 import type {
     ExecutionResult,
@@ -112,6 +113,19 @@ const defaultSampleInput: Record<string, unknown> = {
 const selectedNodeResult = computed<NodeRunResult | null>(() => {
     const key = builder.selectedNode.value?.key;
     return (key && testRun?.resultsByKey.value.get(key)) || null;
+});
+
+/*
+ * Aide-mémoire des variables du node sélectionné (phase 6, lot G) : contexte
+ * `trigger` + ancêtres en BFS sur les arêtes entrants (lib/aiVariables).
+ * Recalculé depuis le graphe vivant — suit ajouts/suppressions de nodes.
+ */
+const upstreamVariables = computed<string[]>(() => {
+    const key = builder.selectedNode.value?.key;
+    if (!key) {
+        return [];
+    }
+    return upstreamVariablePaths(key, builder.nodes.value, builder.edges.value);
 });
 
 testRun = useWorkflowTestRun({
@@ -524,6 +538,7 @@ onBeforeUnmount(() => {
                 :node-result="selectedNodeResult"
                 :integrations="integrations"
                 :workflow-id="workflow.id"
+                :upstream-variables="upstreamVariables"
                 @update-node-name="
                     (key, name) => builder.setNodeName(key, name)
                 "

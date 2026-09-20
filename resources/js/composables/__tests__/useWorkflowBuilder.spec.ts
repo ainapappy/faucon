@@ -4,7 +4,62 @@ import {
     newNodeKey,
     useWorkflowBuilder,
 } from '@/composables/useWorkflowBuilder';
-import type { NodeTypeCatalog, WorkflowGraph } from '@/types';
+import type { NodeField, NodeTypeCatalog, WorkflowGraph } from '@/types';
+
+/* Champs AI partagés par les 5 modes (D12) — select Modèle config-driven, fake d'abord. */
+const AI_MODEL_OPTIONS = [
+    'fake/demo',
+    'openai/gpt-4o-mini',
+    'openai/gpt-4o',
+    'anthropic/claude-haiku-4-5',
+    'anthropic/claude-sonnet-5',
+    'anthropic/claude-opus-5',
+];
+
+function modelField(): NodeField {
+    return {
+        key: 'model',
+        label: 'Modèle',
+        type: 'select',
+        required: false,
+        placeholder: null,
+        options: AI_MODEL_OPTIONS,
+        min: null,
+        max: null,
+        step: null,
+        mono: false,
+    };
+}
+
+function temperatureField(): NodeField {
+    return {
+        key: 'temperature',
+        label: 'Température',
+        type: 'range',
+        required: false,
+        placeholder: null,
+        options: null,
+        min: 0,
+        max: 1,
+        step: 0.1,
+        mono: false,
+    };
+}
+
+function maxTokensField(): NodeField {
+    return {
+        key: 'max_tokens',
+        label: 'Max tokens',
+        type: 'text',
+        required: false,
+        placeholder: null,
+        options: null,
+        min: null,
+        max: null,
+        step: null,
+        mono: true,
+    };
+}
 
 /* Catalogue de test — miroir réduit du catalogue backend (`NodeCatalog`). */
 const catalog: NodeTypeCatalog = {
@@ -79,6 +134,141 @@ const catalog: NodeTypeCatalog = {
             },
         ],
     },
+    /*
+     * Catalogue AI (phase 6, D12) — miroir exact des 5 définitions du
+     * NodeCatalog backend, options de modèle composites config-driven
+     * (fake d'abord : un test-run ne dépense jamais un appel réel).
+     * `ai.summary` n'existe plus : les modes sont prompt, classification,
+     * extraction, summarization, generation.
+     */
+    'ai.prompt': {
+        type: 'ai.prompt',
+        category: 'ai',
+        label: 'Prompt',
+        description: 'Interroge un modèle IA avec un prompt libre',
+        icon: 'pen-line',
+        input: true,
+        outputs: [{ id: 'out', label: null, position: 0.5 }],
+        fields: [
+            modelField(),
+            {
+                key: 'prompt',
+                label: 'Prompt',
+                type: 'textarea',
+                required: false,
+                placeholder: null,
+                options: null,
+                min: null,
+                max: null,
+                step: null,
+                mono: false,
+            },
+            temperatureField(),
+            maxTokensField(),
+        ],
+    },
+    'ai.classification': {
+        type: 'ai.classification',
+        category: 'ai',
+        label: 'Classification',
+        description: 'Catégorise un contenu (sortie structurée)',
+        icon: 'bot',
+        input: true,
+        outputs: [{ id: 'out', label: null, position: 0.5 }],
+        fields: [
+            modelField(),
+            {
+                key: 'prompt',
+                label: 'Prompt',
+                type: 'textarea',
+                required: false,
+                placeholder: null,
+                options: null,
+                min: null,
+                max: null,
+                step: null,
+                mono: false,
+            },
+            {
+                key: 'labels',
+                label: 'Étiquettes',
+                type: 'text',
+                required: false,
+                placeholder: 'lead, spam, question',
+                options: null,
+                min: null,
+                max: null,
+                step: null,
+                mono: true,
+            },
+            temperatureField(),
+            maxTokensField(),
+        ],
+    },
+    'ai.extraction': {
+        type: 'ai.extraction',
+        category: 'ai',
+        label: 'Extraction',
+        description: 'Extrait des champs structurés (JSON) d’un contenu',
+        icon: 'scan-text',
+        input: true,
+        outputs: [{ id: 'out', label: null, position: 0.5 }],
+        fields: [
+            modelField(),
+            {
+                key: 'prompt',
+                label: 'Contenu à analyser',
+                type: 'textarea',
+                required: false,
+                placeholder: null,
+                options: null,
+                min: null,
+                max: null,
+                step: null,
+                mono: false,
+            },
+            {
+                key: 'fields',
+                label: 'Champs (Clé: type, une par ligne)',
+                type: 'textarea',
+                required: false,
+                placeholder: 'nom: text\nmontant: number',
+                options: null,
+                min: null,
+                max: null,
+                step: null,
+                mono: true,
+            },
+            temperatureField(),
+            maxTokensField(),
+        ],
+    },
+    'ai.summarization': {
+        type: 'ai.summarization',
+        category: 'ai',
+        label: 'Résumé',
+        description: 'Condense un contenu long',
+        icon: 'file-text',
+        input: true,
+        outputs: [{ id: 'out', label: null, position: 0.5 }],
+        fields: [
+            modelField(),
+            {
+                key: 'prompt',
+                label: 'Consigne',
+                type: 'textarea',
+                required: false,
+                placeholder: null,
+                options: null,
+                min: null,
+                max: null,
+                step: null,
+                mono: false,
+            },
+            temperatureField(),
+            maxTokensField(),
+        ],
+    },
     'ai.generation': {
         type: 'ai.generation',
         category: 'ai',
@@ -88,18 +278,21 @@ const catalog: NodeTypeCatalog = {
         input: true,
         outputs: [{ id: 'out', label: null, position: 0.5 }],
         fields: [
+            modelField(),
             {
-                key: 'temperature',
-                label: 'Température',
-                type: 'range',
+                key: 'prompt',
+                label: 'Instructions',
+                type: 'textarea',
                 required: false,
                 placeholder: null,
                 options: null,
-                min: 0,
-                max: 1,
-                step: 0.1,
+                min: null,
+                max: null,
+                step: null,
                 mono: false,
             },
+            temperatureField(),
+            maxTokensField(),
         ],
     },
     'action.http': {
@@ -254,8 +447,19 @@ describe('defaultConfigValue', () => {
     });
 
     it('initialise un range au milieu du segment', () => {
-        const field = catalog['ai.generation'].fields[0];
-        expect(defaultConfigValue(field)).toBe(0.5);
+        const field = catalog['ai.generation'].fields.find(
+            (candidate) => candidate.key === 'temperature',
+        );
+        expect(field).toBeDefined();
+        expect(defaultConfigValue(field as NodeField)).toBe(0.5);
+    });
+
+    it('initialise le select Modèle des nodes IA sur la première option (fake/demo)', () => {
+        const field = catalog['ai.generation'].fields.find(
+            (candidate) => candidate.key === 'model',
+        );
+        expect(field?.options?.[0]).toBe('fake/demo');
+        expect(defaultConfigValue(field as NodeField)).toBe('fake/demo');
     });
 
     it('initialise un texte à une chaîne vide', () => {
@@ -314,6 +518,34 @@ describe('useWorkflowBuilder', () => {
         expect(node).not.toBeNull();
         expect(node?.name).toBe('Webhook');
         expect(node?.config).toEqual({});
+    });
+
+    it('ajoute un node ai.classification avec ses cinq champs initialisés du schéma', () => {
+        const builder = useWorkflowBuilder(catalog, buildGraph());
+
+        const node = builder.addNode('ai.classification', { x: 200, y: 200 });
+        expect(node).not.toBeNull();
+        expect(node?.config).toEqual({
+            model: 'fake/demo',
+            prompt: '',
+            labels: '',
+            temperature: 0.5,
+            max_tokens: '',
+        });
+    });
+
+    it('expose les cinq modes AI du catalogue miroir (ai.summary n’existe plus)', () => {
+        const aiTypes = Object.keys(catalog).filter((type) =>
+            type.startsWith('ai.'),
+        );
+        expect(aiTypes).toEqual([
+            'ai.prompt',
+            'ai.classification',
+            'ai.extraction',
+            'ai.summarization',
+            'ai.generation',
+        ]);
+        expect(catalog['ai.summary']).toBeUndefined();
     });
 
     it('ajoute un node action.http avec les six champs du catalogue initialisés', () => {

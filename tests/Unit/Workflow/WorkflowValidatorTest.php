@@ -117,7 +117,7 @@ test('a type outside the catalog reports unknown_type', function () {
 test('a catalog type without an executable handler reports handler_missing', function () {
     $nodes = [
         execNode('n1', 'trigger.manual'),
-        execNode('n2', 'ai.summary'),
+        execNode('n2', 'action.delay'),
         execNode('n3', 'data.output'),
     ];
     $edges = [execEdge('n1', 'n2'), execEdge('n2', 'n3')];
@@ -126,9 +126,9 @@ test('a catalog type without an executable handler reports handler_missing', fun
 
     expect(count($errors))->toBe(1)
         ->and($errors[0]->nodeKey)->toBe('n2')
-        ->and($errors[0]->type)->toBe('ai.summary')
+        ->and($errors[0]->type)->toBe('action.delay')
         ->and($errors[0]->reason)->toBe('handler_missing')
-        ->and($errors[0]->message)->toBe('Le node « Node n2 » utilise un type pas encore exécutable (ai.summary).');
+        ->and($errors[0]->message)->toBe('Le node « Node n2 » utilise un type pas encore exécutable (action.delay).');
 });
 
 test('an unsupported condition operator reports invalid_config', function () {
@@ -164,7 +164,7 @@ test('a reserved data.input variable name reports invalid_config', function () {
 
 test('several problems are reported together', function () {
     $nodes = [
-        execNode('n1', 'ai.summary'),
+        execNode('n1', 'action.delay'),
         execNode('n2', 'data.input', ['name' => '9bad']),
     ];
     $edges = [execEdge('n1', 'n2'), execEdge('n2', 'n1')];
