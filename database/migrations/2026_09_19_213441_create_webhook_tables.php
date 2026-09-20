@@ -14,7 +14,10 @@ return new class extends Migration
         Schema::create('webhook_endpoints', function (Blueprint $table) {
             $table->id();
             $table->foreignId('workflow_id')->constrained()->cascadeOnDelete();
-            $table->string('token', 64);
+            // The model stores the token ENCRYPTED (cast `encrypted`) — the
+            // column must hold the ~244-char payload, hence text. Lookups go
+            // through token_hash (sha-256 hex, fixed 64 chars).
+            $table->text('token');
             $table->string('token_hash', 64)->unique();
             $table->timestamps();
 
