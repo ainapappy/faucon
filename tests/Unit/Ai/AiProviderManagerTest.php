@@ -4,6 +4,7 @@ use App\Services\Ai\AiProviderManager;
 use App\Services\Ai\Providers\AnthropicProvider;
 use App\Services\Ai\Providers\FakeProvider;
 use App\Services\Ai\Providers\OpenAiProvider;
+use App\Services\Ai\Providers\ZAiProvider;
 
 test('the default driver follows the ai.default_provider config', function () {
     config(['ai.default_provider' => 'fake']);
@@ -27,7 +28,8 @@ test('an explicit driver name resolves the matching provider', function () {
 
     expect($manager->provider('fake'))->toBeInstanceOf(FakeProvider::class)
         ->and($manager->provider('openai'))->toBeInstanceOf(OpenAiProvider::class)
-        ->and($manager->provider('anthropic'))->toBeInstanceOf(AnthropicProvider::class);
+        ->and($manager->provider('anthropic'))->toBeInstanceOf(AnthropicProvider::class)
+        ->and($manager->provider('zai'))->toBeInstanceOf(ZAiProvider::class);
 });
 
 test('an unknown driver name throws an invalid argument exception', function () {

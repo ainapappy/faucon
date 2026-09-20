@@ -42,6 +42,12 @@ return [
             'version' => env('ANTHROPIC_VERSION', '2023-06-01'),
             'models' => ['claude-haiku-4-5', 'claude-sonnet-5', 'claude-opus-5'],
         ],
+        'zai' => [
+            'enabled' => filled(env('ZAI_API_KEY')),
+            'key' => env('ZAI_API_KEY'),
+            'base_url' => env('ZAI_BASE_URL', 'https://api.z.ai/api/paas/v4'),
+            'models' => ['glm-4.6', 'glm-4.5', 'glm-4.5-flash'],
+        ],
     ],
 
 ];

@@ -21,6 +21,7 @@ const PROVIDER_LABELS: Record<string, string> = {
     fake: 'Démo',
     openai: 'OpenAI',
     anthropic: 'Anthropic',
+    zai: 'Z.ai',
 };
 
 const PROVIDER_SEPARATOR = '/';

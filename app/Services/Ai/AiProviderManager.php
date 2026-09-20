@@ -5,6 +5,7 @@ namespace App\Services\Ai;
 use App\Services\Ai\Providers\AnthropicProvider;
 use App\Services\Ai\Providers\FakeProvider;
 use App\Services\Ai\Providers\OpenAiProvider;
+use App\Services\Ai\Providers\ZAiProvider;
 use Illuminate\Support\Manager;
 use InvalidArgumentException;
 use LogicException;
@@ -51,5 +52,10 @@ final class AiProviderManager extends Manager
     protected function createAnthropicDriver(): AiProvider
     {
         return new AnthropicProvider;
+    }
+
+    protected function createZaiDriver(): AiProvider
+    {
+        return new ZAiProvider;
     }
 }

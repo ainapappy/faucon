@@ -11,7 +11,7 @@ namespace App\Data\Ai;
 final readonly class AiRequest
 {
     /**
-     * @param  string  $provider  Driver id : 'fake' | 'openai' | 'anthropic' (jamais une clé).
+     * @param  string  $provider  Driver id : 'fake' | 'openai' | 'anthropic' | 'zai' (jamais une clé).
      * @param  string  $model  Model id SANS préfixe provider (ex. 'mon-modele').
      * @param  array<string, string>|null  $jsonSchema  Schéma simple {champ: type} — types
      *                                                  'text'|'number'|'boolean'|'enum:v1,v2,…'. Null = texte libre.

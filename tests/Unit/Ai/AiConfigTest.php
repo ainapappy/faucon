@@ -92,6 +92,20 @@ test('anthropic is enabled exactly when an API key is present', function () {
         ->and($withKey['providers']['anthropic']['version'])->toBe('2023-06-01');
 });
 
+test('zai is enabled exactly when an API key is present', function () {
+    [$withKey, $withoutKey] = withEnvValues(['ZAI_API_KEY' => null], function (): array {
+        $withKey = withEnvValues(['ZAI_API_KEY' => 'zai-test-value'], fn (): mixed => freshAiConfig());
+        $withoutKey = withEnvValues(['ZAI_API_KEY' => null], fn (): mixed => freshAiConfig());
+
+        return [$withKey, $withoutKey];
+    });
+
+    expect($withKey['providers']['zai']['enabled'])->toBeTrue()
+        ->and($withoutKey['providers']['zai']['enabled'])->toBeFalse()
+        ->and($withKey['providers']['zai']['models'])->toBe(['glm-4.6', 'glm-4.5', 'glm-4.5-flash'])
+        ->and($withKey['providers']['zai']['base_url'])->toBe('https://api.z.ai/api/paas/v4');
+});
+
 test('catalog definitions are memoized between reads', function () {
     expect(NodeCatalog::definitionFor('ai.classification'))->toBe(NodeCatalog::definitionFor('ai.classification'));
 });

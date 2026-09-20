@@ -321,6 +321,30 @@ $throw)` (l'array de backoffs va en 1ᵉʳ argument) ; `Http::preventStrayReques
 - `trigger.schedule`, `logic.filter`, `action.message`, `action.delay` restent `handler_missing`
   (hors périmètre de la phase 6).
 
+## Addendum — Provider z.ai (post-phase, 2026-09-20)
+
+Ajout hors plan initial, sur demande utilisateur, après validation de la phase :
+
+- **`app/Services/Ai/Providers/ZAiProvider.php`** — driver `zai` (z.ai, plateforme Zhipu, modèles
+  GLM ; API compatible OpenAI en dialecte classique : limite de tokens en `max_tokens`).
+  Factorisation du socle commun dans **`OpenAiCompatibleProvider`** (classe abstraite, 4 hooks :
+  `configPrefix`, `providerId`, `tokenLimitField`, `defaultBaseUrl`) — clause « factoriser si un
+  3ᵉ provider HTTP réel arrive » du lot B du plan ; comportement OpenAI inchangé
+  (OpenAiProviderTest intact et vert). `AnthropicProvider` reste hors factorisation (non
+  compatible OpenAI).
+- `AiProviderManager::createZaiDriver()` ; `config/ai.php` : `providers.zai`
+  (`enabled` = présence de `ZAI_API_KEY`, `base_url` défaut `https://api.z.ai/api/paas/v4`,
+  `models: ['glm-4.6', 'glm-4.5', 'glm-4.5-flash']`, placé après `anthropic`) ; `.env.example` :
+  `# ZAI_API_KEY=`. `NodeCatalog` : zéro modification (options automatiques via
+  `aiModelOptions()`).
+- Front : libellé `zai → « Z.ai »` dans `nodeOptionLabels.ts` (+ spec) ; options
+  `zai/glm-4.6`, `zai/glm-4.5-flash` dans la maquette `builder.js`. Directive ajoutée à
+  `.knowledge/prompts/phase7.md` (§ Existing Requirements) : conserver et inclure `ZAiProvider`
+  dans tout travail providers, avec le rappel config/memoïzation pour les workers long-lived.
+- Tests : `ZAiProviderTest` (6 contract tests), extensions `AiProviderManagerTest`,
+  `AiConfigTest`, `NodeCatalogTest`. Suites après ajout : Pest **558/558** (1 859 assertions),
+  PHPStan 7 : 0 erreur, Pint propre, Vitest 102 verts, build et `npm run check` OK.
+
 ## Next Phase
 
 Phase 7 — Execution & Queue : exécutions persistées/asynchrones (file d'attente), qui lèvera la

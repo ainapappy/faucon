@@ -29,6 +29,7 @@ describe('nodeOptionLabel', () => {
         expect(nodeOptionLabel('anthropic/claude-opus-5')).toBe(
             'claude-opus-5 · Anthropic',
         );
+        expect(nodeOptionLabel('zai/glm-4.6')).toBe('glm-4.6 · Z.ai');
     });
 
     it('renvoie la valeur brute pour un fournisseur de modèle inconnu', () => {

@@ -256,6 +256,24 @@ test('flush restores the options after the config is reset', function () {
         ->and(NodeCatalog::aiModelOptions())->not->toContain('openai/gpt-4o-mini');
 });
 
+test('the zai provider options follow its enabled config', function () {
+    config(['ai.providers.zai.enabled' => true, 'ai.providers.zai.models' => ['glm-4.6', 'glm-4.5', 'glm-4.5-flash']]);
+    NodeCatalog::flush();
+
+    try {
+        expect(NodeCatalog::aiModelOptions())->toContain('zai/glm-4.6', 'zai/glm-4.5', 'zai/glm-4.5-flash')
+            ->and(NodeCatalog::definitionFor('ai.classification')->fields[0]['options'])->toContain('zai/glm-4.6');
+
+        config(['ai.providers.zai.enabled' => false]);
+        NodeCatalog::flush();
+
+        expect(NodeCatalog::aiModelOptions())->not->toContain('zai/glm-4.6', 'zai/glm-4.5', 'zai/glm-4.5-flash');
+    } finally {
+        config(['ai.providers.zai.enabled' => false, 'ai.providers.zai.models' => ['glm-4.6', 'glm-4.5', 'glm-4.5-flash']]);
+        NodeCatalog::flush();
+    }
+});
+
 test('no api key ever leaks into the catalog definitions or options', function () {
     config(['ai.providers.openai.key' => 'sk-leak-sentinel-1234567890']);
     NodeCatalog::flush();
