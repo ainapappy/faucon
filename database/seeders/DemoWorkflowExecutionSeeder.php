@@ -7,10 +7,12 @@ use App\Enums\ExecutionLogLevel;
 use App\Enums\ExecutionStatus;
 use App\Enums\ExecutionTrigger;
 use App\Models\Team;
+use App\Models\User;
 use App\Models\Workflow;
 use App\Models\WorkflowExecution;
 use App\Models\WorkflowExecutionLog;
 use App\Models\WorkflowNode;
+use App\Notifications\ExecutionFailedNotification;
 use App\Services\Workflow\Log\ExecutionLogMessages;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -47,6 +49,47 @@ class DemoWorkflowExecutionSeeder extends Seeder
 
             $this->seedHistory($workflow);
         });
+
+        $demoUser = User::query()->where('email', DemoUserSeeder::DemoEmail)->first();
+
+        if ($demoUser !== null) {
+            $this->seedFailureNotifications($team, $demoUser);
+        }
+    }
+
+    /**
+     * Seed the failure notifications of the demo user (phase 10 directive):
+     * one manual failed run per workflow, authored by the demo user (A1
+     * coherence), produces two UNREAD and one READ notification.
+     */
+    private function seedFailureNotifications(Team $team, User $author): void
+    {
+        if ($author->notifications()->exists()) {
+            return;
+        }
+
+        $notifications = collect();
+
+        $team->workflows->each(function (Workflow $workflow) use ($author, &$notifications): void {
+            $execution = $this->seedRun(
+                $workflow,
+                ExecutionStatus::Failed,
+                hoursAgo: 24,
+                trigger: ExecutionTrigger::Manual,
+                failingNode: $workflow->nodes->skip(1)->first()?->key,
+                author: $author,
+            );
+
+            $author->notify(new ExecutionFailedNotification($execution->refresh()));
+
+            $notifications->push($author->notifications()->firstOrFail());
+        });
+
+        // Age the notifications realistically: the oldest is the READ one.
+        $notifications->values()[0]->forceFill(['created_at' => now()->subHours(30)])->save();
+        $notifications->values()[0]->markAsRead();
+        $notifications->values()[1]->forceFill(['created_at' => now()->subHours(5)])->save();
+        $notifications->values()[2]->forceFill(['created_at' => now()->subHours(2)])->save();
     }
 
     /**
@@ -73,11 +116,13 @@ class DemoWorkflowExecutionSeeder extends Seeder
         int $hoursAgo = 0,
         ExecutionTrigger $trigger = ExecutionTrigger::Manual,
         ?string $failingNode = null,
-    ): void {
+        ?User $author = null,
+    ): WorkflowExecution {
         $startedAt = now()->subDays($daysAgo)->subHours($hoursAgo)->subMinutes(27);
 
         $attributes = [
             'team_id' => $workflow->team_id,
+            'user_id' => $author?->id,
             'triggered_by' => $trigger,
             'status' => $status,
             'attempt' => $status === ExecutionStatus::Failed ? 2 : 1,
@@ -118,6 +163,8 @@ class DemoWorkflowExecutionSeeder extends Seeder
         if ($status !== ExecutionStatus::Pending) {
             $this->seedLogs($execution, $status, $failingNode, $startedAt);
         }
+
+        return $execution;
     }
 
     /**

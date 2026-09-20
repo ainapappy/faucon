@@ -53,7 +53,7 @@ Backend :
   `permissions`.
 - `app/Http/Controllers/Templates/UseWorkflowTemplateController.php` — invokable :
   résolution `visibleFor + firstOrFail` (jamais de find global), `Gate::authorize('use',
-  [$template, $team])`, instanciation, flash toast, redirect éditeur.
+[$template, $team])`, instanciation, flash toast, redirect éditeur.
 - `app/Http/Controllers/Workflows/PublishWorkflowTemplateController.php` — invokable :
   scoping `$currentTeam->workflows()`, Gate `publish`, catch
   `TemplateNotPublishableException` → `back()->withErrors(['graph' => …])`, succès →
@@ -98,7 +98,7 @@ Frontend :
   `fromSnapshot(array): array` (statique) ; `map()` inchangé.
 - `app/Policies/WorkflowPolicy.php` — + `publish()` (= `update`).
 - `app/Http/Controllers/Workflows/WorkflowController.php` — duplicate délégué au service ;
-  + prop `templateCategories` (catégories distinctes des templates visibles).
+    - prop `templateCategories` (catégories distinctes des templates visibles).
 - `routes/web.php` — + 3 routes (groupe `{current_team}`).
 - `database/seeders/DatabaseSeeder.php` — + `TemplateSeeder`.
 - `app/Actions/Workflows/DuplicateWorkflow.php` — **supprimé** (logique déplacée dans le
@@ -158,7 +158,7 @@ complète : instanciation depuis le template webhook → `WorkflowValidator` vid
 - `php artisan migrate` (dev MariaDB), `db:seed --class=TemplateSeeder` ×2 (idempotence),
   `migrate:fresh --seed` (base de démo complète), `wayfinder:generate --with-form`.
 - Finales : `vendor/bin/pint --dirty`, `vendor/bin/phpstan analyse`, `php artisan test
-  --compact` (726/726), `npm run test:unit | types:check | build`.
+--compact` (726/726), `npm run test:unit | types:check | build`.
 
 ## Key Information
 
@@ -177,7 +177,7 @@ Arbitrages A1–A4 et décisions D1–D13 détaillés dans
   prompt).
 - **Pas de re-keying à l'instanciation** (D4) : l'unicité de `workflow_nodes.key` est
   par workflow — la copie fidèle est triviale et les interpolations (`{{ node.key.output
-  }}`) restent valides sans réécriture.
+}}`) restent valides sans réécriture.
 - **Webhook immédiatement déclencheable** : `instantiate` crée l'endpoint webhook
   (mécanisme existant) après la transaction — un workflow issu d'un template webhook est
   exécutable sans retouche (prouvé par le e2e).

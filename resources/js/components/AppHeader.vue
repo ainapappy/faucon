@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, Menu, Search } from '@lucide/vue';
+import {
+    Activity,
+    BookOpen,
+    Folder,
+    LayoutGrid,
+    Menu,
+    Search,
+} from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
@@ -33,10 +40,12 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import UserMenuContent from '@/components/UserMenuContent.vue';
+import NotificationsBell from '@/components/notifications/NotificationsBell.vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { getInitials } from '@/composables/useInitials';
 import { toUrl } from '@/lib/utils';
 import { dashboard } from '@/routes';
+import { index as executionsIndex } from '@/routes/workflow-executions';
 import type { BreadcrumbItem, NavItem } from '@/types';
 
 type Props = {
@@ -55,6 +64,12 @@ const dashboardUrl = computed(() =>
     page.props.currentTeam ? dashboard(page.props.currentTeam.slug).url : '/',
 );
 
+const executionsUrl = computed(() =>
+    page.props.currentTeam
+        ? executionsIndex({ current_team: page.props.currentTeam.slug }).url
+        : '/',
+);
+
 const activeItemStyles =
     'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
 
@@ -63,6 +78,11 @@ const mainNavItems = computed<NavItem[]>(() => [
         title: 'Dashboard',
         href: dashboardUrl.value,
         icon: LayoutGrid,
+    },
+    {
+        title: 'Exécutions',
+        href: executionsUrl.value,
+        icon: Activity,
     },
 ]);
 
@@ -105,6 +125,10 @@ const rightNavItems: NavItem[] = [
                                     class="size-6 fill-current text-black dark:text-white"
                                 />
                             </SheetHeader>
+                            <!-- Cloche accessible sur mobile aussi (lot E). -->
+                            <div class="flex justify-end">
+                                <NotificationsBell />
+                            </div>
                             <div
                                 class="flex h-full flex-1 flex-col justify-between space-y-4 py-6"
                             >
@@ -242,6 +266,9 @@ const rightNavItems: NavItem[] = [
                             </template>
                         </div>
                     </div>
+
+                    <!-- Cloche des notifications (phase 10, D9). -->
+                    <NotificationsBell />
 
                     <DropdownMenu>
                         <DropdownMenuTrigger :as-child="true">

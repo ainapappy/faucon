@@ -3,6 +3,9 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Integrations\IntegrationController;
 use App\Http\Controllers\Integrations\TestIntegrationConnectionController;
+use App\Http\Controllers\Notifications\MarkAllNotificationsReadController;
+use App\Http\Controllers\Notifications\MarkNotificationReadController;
+use App\Http\Controllers\Notifications\NotificationController;
 use App\Http\Controllers\Teams\TeamInvitationController;
 use App\Http\Controllers\Templates\UseWorkflowTemplateController;
 use App\Http\Controllers\Templates\WorkflowTemplateController;
@@ -56,6 +59,12 @@ Route::prefix('{current_team}')
 Route::middleware(['auth'])->group(function () {
     Route::post('invitations/{invitation}/accept', [TeamInvitationController::class, 'accept'])->name('invitations.accept');
     Route::delete('invitations/{invitation}', [TeamInvitationController::class, 'decline'])->name('invitations.decline');
+
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::patch('notifications/{notification}', MarkNotificationReadController::class)
+        ->whereUuid('notification')
+        ->name('notifications.read');
+    Route::post('notifications/read-all', MarkAllNotificationsReadController::class)->name('notifications.read-all');
 });
 
 Route::post('webhooks/{token}', WebhookController::class)

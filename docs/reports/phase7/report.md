@@ -62,7 +62,7 @@ Backend :
 - `database/migrations/2026_09_20_054504_create_workflow_executions_table.php` — schéma D11
   (+ `user_id` nullable, arbitrage A6) ; index `status` et `(workflow_id, status, created_at)`.
 - `database/factories/WorkflowExecutionFactory.php` — états `running/completed/failed/
-  cancelled/webhook/schedule`.
+cancelled/webhook/schedule`.
 - `database/seeders/DemoWorkflowExecutionSeeder.php` — historique réaliste par workflow de
   démo (timeline construite depuis le vrai graphe), idempotent.
 
@@ -71,7 +71,7 @@ Frontend :
 - `resources/js/types/executions.ts` — `WorkflowExecutionStatus/Trigger`, liste, détail,
   `PaginatedExecutions` (paginator Inertia aplati), `ExecutionFilters`, `WorkflowOption`.
 - `resources/js/composables/useExecutionPolling.ts` — `usePoll(1500, only:['execution'],
-  autoStart:false)` + watcher : démarre sur statut non final, stoppe à l'état final.
+autoStart:false)` + watcher : démarre sur statut non final, stoppe à l'état final.
 - `resources/js/components/executions/ExecutionStatusBadge.vue` — 5 statuts, icône +
   libellé + token (règle CVD), spinner animé sur `running`.
 - `resources/js/lib/executionFormat.ts` — `formatDurationMs` (miroir `$fmt.ms`),
@@ -84,20 +84,20 @@ Frontend :
 ### Files Modified
 
 - `app/Services/Workflow/WorkflowRunner.php` — `run(..., ?callable $beforeNode, ?int
-  $timeoutMs)` ; statut `cancelled` ; message de timeout neutre (« L'exécution a dépassé… »).
+$timeoutMs)` ; statut `cancelled` ; message de timeout neutre (« L'exécution a dépassé… »).
 - `app/Data/Workflow/ExecutionResult.php` — commentaire du statut (DTO inchangé).
 - `app/Actions/Workflows/TestRunWorkflow.php` — délègue le mapping au `WorkflowGraphMapper`
   (comportement inchangé, tests phase 4/5/6 verts).
 - `app/Http/Controllers/Workflows/WebhookController.php` — fin **async** : `StartWorkflowRun`
-  + **202** `{status: 'pending', execution_id}` ; amont inchangé (lookup hash, éligibilité 404
-  uniforme, bornes payload, dédup `WebhookRequest`).
+    - **202** `{status: 'pending', execution_id}` ; amont inchangé (lookup hash, éligibilité 404
+      uniforme, bornes payload, dédup `WebhookRequest`).
 - `app/Models/Workflow.php` — relation `executions()`.
 - `app/Providers/AppServiceProvider.php` — enregistrement `ScheduleHandler` au registre.
 - `app/Http/Requests/Workflows/SaveWorkflowGraphRequest.php` —
   `validateTriggerScheduleCron` : délégation au handler (un lieu de vérité avec le moteur).
 - `routes/web.php` — `workflows.run`, `workflow-executions.index`, `workflow-executions.cancel`.
 - `routes/console.php` — entrée unique `Schedule::call(DispatchScheduledWorkflows)
-  ->everyMinute()->withoutOverlapping()->name('workflow-schedule-triggers')`.
+->everyMinute()->withoutOverlapping()->name('workflow-schedule-triggers')`.
 - `config/workflows.php` — section `execution` (`timeout_ms`, `max_tries`, `backoff`,
   `cancel_ttl`, `retryable_reasons`).
 - `.env.example` — `# WORKFLOW_EXECUTION_TIMEOUT_MS/MAX_TRIES/CANCEL_TTL` documentés.
@@ -130,7 +130,7 @@ Tests (nouveaux) :
   → `cancelled` sans événements, flag levé en cours de run → arrêt entre deux nodes avec
   résultat partiel, workflow inactif/supprimé → `workflow_inactive`, exécution finale
   intouchable, `failed()` une fois (gardé), propriétés config (`tries/backoff/timeout/
-  middleware`), colonne `attempt` = tentative queue.
+middleware`), colonne `attempt` = tentative queue.
 - `tests/Feature/Workflows/WorkflowRunTest.php` (6) — run manuel (pending+dispatch+user),
   input stocké, 422 sur draft sans dispatch, membre autorisé, intruse 403, 404 hors équipe.
 - `tests/Feature/Workflows/ExecutionCancelTest.php` (5) — flag posé, final → 200 sans flag,
@@ -151,8 +151,8 @@ Tests (nouveaux) :
 Tests modifiés :
 
 - `tests/Feature/Workflows/WebhookTriggerTest.php` — contrat 202 (exécution `pending`
-  + `Queue::assertPushed`), doublon → 200 `duplicate` + un seul job, sans `X-Request-Id` →
-  2 dispatchs, rate-limit sur 202.
+    - `Queue::assertPushed`), doublon → 200 `duplicate` + un seul job, sans `X-Request-Id` →
+      2 dispatchs, rate-limit sur 202.
 - `tests/Unit/Workflow/WorkflowRunnerTest.php` — libellé du timeout aligné sur la nouvelle
   formulation neutre.
 

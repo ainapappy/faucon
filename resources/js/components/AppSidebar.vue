@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import {
+    Activity,
     BookOpen,
     FolderGit2,
     Layers,
@@ -24,6 +25,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { index as templatesIndex } from '@/routes/templates';
+import { index as executionsIndex } from '@/routes/workflow-executions';
 import { index as workflowsIndex } from '@/routes/workflows';
 import type { NavItem } from '@/types';
 
@@ -39,17 +41,33 @@ const workflowsUrl = computed(() =>
         : '/',
 );
 
+const executionsUrl = computed(() =>
+    page.props.currentTeam
+        ? executionsIndex({ current_team: page.props.currentTeam.slug }).url
+        : '/',
+);
+
 const templatesUrl = computed(() =>
     page.props.currentTeam
         ? templatesIndex({ current_team: page.props.currentTeam.slug }).url
         : '/',
 );
 
+/*
+ * Nav principale — « Exécutions » ajoutée en phase 10 (lot F) : la page
+ * n'était accessible que par détours alors que la maquette la place dans la
+ * nav « Pilotage » (sans le badge décoratif de la maquette).
+ */
 const mainNavItems = computed<NavItem[]>(() => [
     {
         title: 'Dashboard',
         href: dashboardUrl.value,
         icon: LayoutGrid,
+    },
+    {
+        title: 'Exécutions',
+        href: executionsUrl.value,
+        icon: Activity,
     },
     {
         title: 'Workflows',

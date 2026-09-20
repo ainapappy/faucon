@@ -9,11 +9,14 @@ use App\Models\User;
 use App\Models\WebhookEndpoint;
 use App\Models\Workflow;
 use App\Models\WorkflowEdge;
+use App\Models\WorkflowExecution;
 use App\Models\WorkflowNode;
+use App\Notifications\ExecutionFailedNotification;
 use App\Services\Workflow\NodeCatalog;
 use App\Services\Workflow\NodeHandlerRegistry;
 use Database\Seeders\DemoUserSeeder;
 use Database\Seeders\DemoWorkflowSeeder;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Hash;
 
 test('seeding creates the demo user with its team and membership', function () {
@@ -150,4 +153,43 @@ test('a second seeding run duplicates nothing', function () {
         ->and($counts['edges'])->toBe(10)
         ->and($counts['integrations'])->toBe(2)
         ->and($counts['endpoints'])->toBe(1);
+});
+
+test('seeding creates two unread failure notifications and one read one for the demo author', function () {
+    $this->seed();
+
+    $user = User::query()->where('email', DemoUserSeeder::DemoEmail)->firstOrFail();
+
+    $notifications = $user->notifications()->orderBy('created_at')->get();
+
+    expect($notifications)->toHaveCount(3)
+        ->and($user->unreadNotifications()->count())->toBe(2)
+        ->and($notifications->every(fn ($notification) => $notification->type === ExecutionFailedNotification::class))->toBeTrue()
+        ->and($notifications->last()->read_at)->not->toBeNull()
+        ->and($notifications->first()->read_at)->toBeNull();
+
+    // The notified runs are MANUAL runs authored by the demo user (A1).
+    $executionIds = $notifications
+        ->map(fn ($notification) => $notification->data['executionId']);
+
+    $runs = WorkflowExecution::query()->whereIn('id', $executionIds)->get();
+
+    expect($runs)->toHaveCount(3)
+        ->and($runs->every(fn ($run) => $run->triggered_by->value === 'manual'))->toBeTrue()
+        ->and($runs->every(fn ($run) => $run->user_id === $user->id))->toBeTrue()
+        ->and($runs->every(fn ($run) => $run->status->value === 'failed'))->toBeTrue();
+});
+
+test('a second seeding run duplicates no execution and no notification', function () {
+    $this->seed();
+
+    $executions = WorkflowExecution::query()->count();
+    $notifications = DatabaseNotification::query()->count();
+
+    $this->seed();
+
+    expect(WorkflowExecution::query()->count())->toBe($executions)
+        ->and(DatabaseNotification::query()->count())->toBe($notifications)
+        ->and($executions)->toBe(24)   // 3 workflows x (7 history + 1 failed manual) runs
+        ->and($notifications)->toBe(3);
 });

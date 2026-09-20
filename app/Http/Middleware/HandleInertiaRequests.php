@@ -2,7 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\NotificationPresenter;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -46,6 +48,14 @@ class HandleInertiaRequests extends Middleware
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'currentTeam' => fn () => $user?->currentTeam ? $user->toUserTeam($user->currentTeam) : null,
             'teams' => fn () => $user?->toUserTeams(includeCurrent: true) ?? [],
+            // Bell feed (D5): exact unread count + the 5 most recent UNREAD
+            // notifications — evaluated only when the page resolves the prop.
+            'notifications' => fn (): ?array => $user === null ? null : [
+                'unreadCount' => $user->unreadNotifications()->count(),
+                'recent' => $user->unreadNotifications()->take(5)->get()
+                    ->map(fn (DatabaseNotification $notification): array => NotificationPresenter::item($notification))
+                    ->all(),
+            ],
         ];
     }
 }

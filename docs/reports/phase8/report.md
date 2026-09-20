@@ -33,7 +33,7 @@ Backend :
   (info|ok|error), `node_key` varchar(64) nullable, `node_type`/`node_name`/`status`/`duration_ms`
   nullable, `message` text, `input`/`output`/`error` JSON, `offset_ms`, index
   `(workflow_execution_id, attempt)` et index unique `(workflow_execution_id, attempt,
-  node_key)` nommé **court** `workflow_execution_logs_unique` (cf. Gotchas) — les rows
+node_key)` nommé **court** `workflow_execution_logs_unique` (cf. Gotchas) — les rows
   d'événements (`node_key` NULL) ne participent pas à l'unicité.
 - `app/Enums/ExecutionLogKind.php` — `Node|Event`.
 - `app/Enums/ExecutionLogLevel.php` — `Info|Ok|Error`.
@@ -88,7 +88,7 @@ Tests (nouveaux) :
 ### Files Modified
 
 - `app/Data/Workflow/NodeRunResult.php` — + `input` (default `[]`), `toArray()` l'expose,
-  + `toSummaryArray()` (sans `output`/`input`).
+    - `toSummaryArray()` (sans `output`/`input`).
 - `app/Data/Workflow/ExecutionResult.php` — + `toSummaryArray()`.
 - `app/Services/Workflow/WorkflowRunner.php` — paramètre optionnel `?callable $onNodeResult`,
   appelé après CHAQUE node exécuté (y compris les deux chemins d'exception), jamais pour les
@@ -179,7 +179,7 @@ l'assertion `output['cron']` du trigger migre vers sa row de log) — total suit
 - `php artisan migrate` (dev MariaDB), `php artisan model:prune --pretend` (les deux modèles
   détectés), `php artisan wayfinder:generate --with-form`.
 - Finaux : `composer test` (Pint + PHPStan + Pest 679/679) ; `npm run test:unit |
-  types:check | build`.
+types:check | build`.
 
 ## Key Information
 
@@ -227,7 +227,7 @@ Arbitrages A1–A8 appliqués (§0 du plan) ; décisions D1–D8 détaillées da
 - **`$callback?($args)`** (nullsafe sur callable) est une **erreur de compilation PHP** —
   closures à instructions dans le runner et le job.
 - **Factory `->for($execution)`** exige le nom de la relation : `->for($execution,
-  'execution')` + FK `workflow_execution_id` explicite sur le `belongsTo`.
+'execution')` + FK `workflow_execution_id` explicite sur le `belongsTo`.
 - **Ordre des rows `queued`** = ordre du graphe mappé (positions de l'éditeur), pas l'ordre
   d'insertion — c'est le bon ordre de timeline ; les assertions de tests sont rendues
   insensibles via `keyBy`.

@@ -8,6 +8,7 @@ use App\Models\Team;
 use App\Models\Workflow;
 use App\Models\WorkflowExecution;
 use App\Models\WorkflowExecutionLog;
+use App\Services\Workflow\ExecutionPresenter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -51,7 +52,7 @@ final class WorkflowExecutionController extends Controller
 
         return Inertia::render('workflows/executions/Index', [
             'executions' => $executions->through(
-                fn (WorkflowExecution $execution) => $this->toListItem($execution),
+                fn (WorkflowExecution $execution) => ExecutionPresenter::listItem($execution),
             ),
             'execution' => $this->selectedExecution($request, $currentTeam),
             'workflows' => $this->workflowOptions($currentTeam),
@@ -63,27 +64,6 @@ final class WorkflowExecutionController extends Controller
             'logs_retention_days' => (int) config('workflows.logs.retention_days', 30),
             'permissions' => $request->user()->toTeamPermissions($currentTeam),
         ]);
-    }
-
-    /**
-     * Map a persisted execution to its list row.
-     *
-     * @return array<string, mixed>
-     */
-    private function toListItem(WorkflowExecution $execution): array
-    {
-        return [
-            'id' => $execution->id,
-            'status' => $execution->status->value,
-            'triggered_by' => $execution->triggered_by->value,
-            'attempt' => $execution->attempt,
-            'duration_ms' => $execution->duration_ms,
-            'created_at' => $execution->created_at->toIso8601String(),
-            'workflow' => [
-                'id' => $execution->workflow->id,
-                'name' => $execution->workflow->name,
-            ],
-        ];
     }
 
     /**
@@ -111,7 +91,7 @@ final class WorkflowExecutionController extends Controller
 
         Gate::authorize('view', $execution);
 
-        return array_merge($this->toListItem($execution), [
+        return array_merge(ExecutionPresenter::listItem($execution), [
             'input' => $execution->input,
             'logs' => $execution->logs->map(fn (WorkflowExecutionLog $log) => $this->toLogRow($log))->all(),
             'error' => $execution->error,
