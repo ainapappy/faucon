@@ -37,8 +37,12 @@ Route::prefix('{current_team}')
         Route::post('workflows/{workflow}/duplicate', [WorkflowController::class, 'duplicate'])->name('workflows.duplicate');
         Route::post('workflows/{workflow}/publish', PublishWorkflowTemplateController::class)->name('workflows.publish');
         Route::put('workflows/{workflow}/graph', SaveWorkflowGraphController::class)->name('workflows.graph.update');
-        Route::post('workflows/{workflow}/test-run', TestRunWorkflowController::class)->name('workflows.test-run');
-        Route::post('workflows/{workflow}/run', RunWorkflowController::class)->name('workflows.run');
+        Route::post('workflows/{workflow}/test-run', TestRunWorkflowController::class)
+            ->middleware('throttle:workflow-run')
+            ->name('workflows.test-run');
+        Route::post('workflows/{workflow}/run', RunWorkflowController::class)
+            ->middleware('throttle:workflow-run')
+            ->name('workflows.run');
 
         Route::get('templates', [WorkflowTemplateController::class, 'index'])->name('templates.index');
         Route::post('templates/{template}/use', UseWorkflowTemplateController::class)->name('templates.use');

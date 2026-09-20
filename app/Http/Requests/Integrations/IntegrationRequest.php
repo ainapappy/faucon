@@ -5,6 +5,7 @@ namespace App\Http\Requests\Integrations;
 use App\Enums\IntegrationType;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -15,6 +16,25 @@ use Illuminate\Validation\Validator;
  */
 abstract class IntegrationRequest extends FormRequest
 {
+    /**
+     * The credential keys persisted for the generic_http type (S5): any
+     * other key is silently dropped before validation and persistence.
+     *
+     * @var array<int, string>
+     */
+    private const array GenericHttpCredentialKeys = [
+        'baseUrl', 'auth', 'token', 'username', 'password', 'headerName', 'headerValue',
+    ];
+
+    /**
+     * The credential keys persisted for the smtp type (S5).
+     *
+     * @var array<int, string>
+     */
+    private const array SmtpCredentialKeys = [
+        'host', 'port', 'encryption', 'username', 'password', 'from',
+    ];
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -52,7 +72,9 @@ abstract class IntegrationRequest extends FormRequest
     }
 
     /**
-     * Get the validated credentials (missing optional fields untouched).
+     * Get the validated credentials (missing optional fields untouched),
+     * filtered against the key whitelist of the integration type: unknown
+     * keys never reach validation nor persistence.
      *
      * @return array<string, mixed>|null
      */
@@ -60,7 +82,25 @@ abstract class IntegrationRequest extends FormRequest
     {
         $credentials = $this->input('credentials');
 
-        return is_array($credentials) ? $credentials : null;
+        if (! is_array($credentials)) {
+            return null;
+        }
+
+        return Arr::only($credentials, $this->allowedCredentialKeys());
+    }
+
+    /**
+     * Get the credential keys allowed for the requested integration type.
+     *
+     * @return array<int, string>
+     */
+    private function allowedCredentialKeys(): array
+    {
+        return match ((string) $this->input('type')) {
+            IntegrationType::GenericHttp->value => self::GenericHttpCredentialKeys,
+            IntegrationType::Smtp->value => self::SmtpCredentialKeys,
+            default => [],
+        };
     }
 
     /**

@@ -2,9 +2,12 @@
 
 namespace App\Http\Requests\Workflows;
 
+use App\Data\Workflow\ExecutionError;
 use App\Enums\WorkflowStatus;
 use App\Models\Team;
 use App\Models\Workflow;
+use App\Services\Workflow\WorkflowGraphMapper;
+use App\Services\Workflow\WorkflowValidator;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -12,6 +15,11 @@ use Illuminate\Validation\Validator;
 
 class UpdateWorkflowRequest extends FormRequest
 {
+    public function __construct(
+        private readonly WorkflowGraphMapper $graphs,
+        private readonly WorkflowValidator $graphValidator,
+    ) {}
+
     /**
      * Get the workflow resolved from the current team (scoped resolution).
      */
@@ -65,12 +73,37 @@ class UpdateWorkflowRequest extends FormRequest
 
                 $workflow = $this->workflow();
 
-                if ($workflow->triggerNode()->exists()) {
+                if (! $workflow->triggerNode()->exists()) {
+                    $validator->errors()->add('status', __('A workflow needs at least one trigger node to be activated.'));
+
                     return;
                 }
 
-                $validator->errors()->add('status', __('A workflow needs at least one trigger node to be activated.'));
+                // Full executability applies to a transition to active: a
+                // workflow already active is never re-blocked, and neither
+                // deactivation nor metadata updates are ever blocked.
+                if ($workflow->status === WorkflowStatus::Active) {
+                    return;
+                }
+
+                foreach ($this->executabilityErrors($workflow) as $error) {
+                    $validator->errors()->add('status', $error->message);
+                }
             },
         ];
+    }
+
+    /**
+     * Run the same executability validation as the engine (mapper +
+     * WorkflowValidator) over the persisted graph — the exact path used
+     * at run and publish time.
+     *
+     * @return list<ExecutionError>
+     */
+    private function executabilityErrors(Workflow $workflow): array
+    {
+        [$nodes, $edges] = $this->graphs->map($workflow);
+
+        return $this->graphValidator->validate($nodes, $edges);
     }
 }

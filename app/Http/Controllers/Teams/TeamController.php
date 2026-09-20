@@ -9,6 +9,7 @@ use App\Http\Requests\Teams\DeleteTeamRequest;
 use App\Http\Requests\Teams\SaveTeamRequest;
 use App\Models\Membership;
 use App\Models\Team;
+use App\Models\TeamInvitation;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,6 +50,7 @@ class TeamController extends Controller
     public function edit(Request $request, Team $team): Response
     {
         $user = $request->user();
+        $canCancelInvitation = $user->can('cancelInvitation', $team);
 
         return Inertia::render('teams/Edit', [
             'team' => [
@@ -73,13 +75,21 @@ class TeamController extends Controller
             'invitations' => $team->invitations()
                 ->whereNull('accepted_at')
                 ->get()
-                ->map(fn ($invitation) => [
-                    'code' => $invitation->code,
-                    'email' => $invitation->email,
-                    'role' => $invitation->role->value,
-                    'role_label' => $invitation->role->label(),
-                    'created_at' => $invitation->created_at->toISOString(),
-                ]),
+                ->map(function (TeamInvitation $invitation) use ($canCancelInvitation): array {
+                    $row = [
+                        'id' => $invitation->id,
+                        'email' => $invitation->email,
+                        'role' => $invitation->role->value,
+                        'role_label' => $invitation->role->label(),
+                        'created_at' => $invitation->created_at->toISOString(),
+                    ];
+
+                    if ($canCancelInvitation) {
+                        $row['code'] = $invitation->code;
+                    }
+
+                    return $row;
+                }),
             'permissions' => $user->toTeamPermissions($team),
             'availableRoles' => TeamRole::assignable(),
         ]);
@@ -110,7 +120,7 @@ class TeamController extends Controller
      */
     public function switch(Request $request, Team $team): RedirectResponse
     {
-        abort_unless($request->user()->belongsToTeam($team), 403);
+        Gate::authorize('view', $team);
 
         $request->user()->switchTeam($team);
 

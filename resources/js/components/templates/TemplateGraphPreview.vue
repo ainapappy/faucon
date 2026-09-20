@@ -7,8 +7,8 @@ import type { NodeTypeCatalog, TemplateGraph } from '@/types';
  * Aperçu SVG statique du graphe d'un template (maquette templates.html,
  * D10) : rendu purement déclaratif du layout calculé par lib/templatePreview.
  * Non interactif — aucune poignée, aucun écouteur ; lisible clair/sombre via
- * les tokens. Les libellés passent par des <text> Vue (échappés), jamais
- * v-html : le contenu du snapshot est sûr par construction.
+ * les tokens. Les libellés sont rendus par interpolation Vue échappée dans
+ * des <text> SVG : le contenu du snapshot n'est jamais interprété comme HTML.
  */
 const props = defineProps<{
     graph: TemplateGraph;

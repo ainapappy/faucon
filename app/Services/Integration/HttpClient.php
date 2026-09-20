@@ -9,9 +9,9 @@ use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 
 /**
- * The single hardened wrapper of the Http facade (D7): URL/host guard,
- * manual per-hop redirect validation, short timeouts and a response
- * size ceiling.
+ * The single hardened wrapper of the Http facade (D7): URL/host guard
+ * with DNS pinning (CURLOPT_RESOLVE, S7), manual per-hop redirect
+ * validation, short timeouts and a response size ceiling.
  *
  * DNS resolution goes through an injectable closure (tests inject fixed
  * addresses; no test ever performs a real DNS query or network call).
@@ -50,7 +50,7 @@ final class HttpClient
      */
     public function send(string $method, string $url, array $headers = [], ?string $body = null): Response
     {
-        $this->guard($url);
+        $pin = $this->pinEntries($url);
 
         $maxRedirects = (int) config('workflows.http.max_redirects', 2);
 
@@ -65,7 +65,10 @@ final class HttpClient
 
         while (true) {
             try {
-                $response = $pending->send($method, $current, ['body' => $body]);
+                $response = $pending->send($method, $current, [
+                    'body' => $body,
+                    'curl' => [CURLOPT_RESOLVE => $pin],
+                ]);
             } catch (ConnectionException $exception) {
                 if (str_contains($exception->getMessage(), 'timed out')) {
                     throw HttpClientException::timeout($exception->getMessage());
@@ -89,7 +92,7 @@ final class HttpClient
             }
 
             $current = $this->resolveLocation($current, $location);
-            $this->guard($current);
+            $pin = $this->pinEntries($current);
             $hops++;
         }
 
@@ -108,8 +111,8 @@ final class HttpClient
     }
 
     /**
-     * Resolve a hostname to its IP addresses (A + AAAA), or through the
-     * injected test closure when provided.
+     * Resolve a hostname to its IP addresses (every A record + every
+     * AAAA record), or through the injected test closure when provided.
      *
      * @return list<string>
      */
@@ -119,29 +122,41 @@ final class HttpClient
             return ($this->resolveHost)($host);
         }
 
-        $addresses = [];
-
-        $ipv4 = gethostbyname($host);
-
-        if ($ipv4 !== $host) {
-            $addresses[] = $ipv4;
-        }
-
-        foreach (dns_get_record($host, DNS_AAAA) ?: [] as $record) {
-            if (isset($record['ipv6']) && is_string($record['ipv6'])) {
-                $addresses[] = $record['ipv6'];
-            }
-        }
-
-        return $addresses;
+        return self::addressesFromDnsRecords(
+            dns_get_record($host, DNS_A) ?: [],
+            dns_get_record($host, DNS_AAAA) ?: [],
+        );
     }
 
     /**
-     * Validate the scheme and every resolved address of a url.
+     * The CURLOPT_RESOLVE entries pinning a url to the exact addresses
+     * its single resolution returned (S7): curl uses these addresses
+     * without resolving the host again, so the connection cannot diverge
+     * from what the guard classified — DNS rebinding (TOCTOU) and multi-A
+     * drift become structurally impossible. Recomputed on every redirect
+     * hop.
+     *
+     * @return list<string>
      *
      * @throws HttpClientException invalid_url|blocked_host
      */
-    private function guard(string $url): void
+    public function pinEntries(string $url): array
+    {
+        return self::destinationPinEntries($this->guard($url));
+    }
+
+    /**
+     * Validate the scheme and every resolved address of a url, and
+     * return the destination the connection is allowed to use: the host
+     * as written in the url, its port (explicit, else the scheme
+     * default) and every address of one fresh resolution, all of them
+     * classified.
+     *
+     * @return array{host: string, port: int, addresses: list<string>}
+     *
+     * @throws HttpClientException invalid_url|blocked_host
+     */
+    private function guard(string $url): array
     {
         $parts = parse_url($url);
 
@@ -156,10 +171,12 @@ final class HttpClient
             throw HttpClientException::invalidUrl('Scheme not http(s): '.$scheme);
         }
 
+        $port = self::destinationPort($parts, $scheme);
+
         if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
             $this->guardIp($host);
 
-            return;
+            return ['host' => $host, 'port' => $port, 'addresses' => [$host]];
         }
 
         $addresses = $this->resolveHost($host);
@@ -171,6 +188,75 @@ final class HttpClient
         if ($addresses === []) {
             throw HttpClientException::blockedHost('Unresolvable host: '.$host);
         }
+
+        return ['host' => $host, 'port' => $port, 'addresses' => $addresses];
+    }
+
+    /**
+     * One pin entry per validated address ("host:port:ip").
+     *
+     * @param  array{host: string, port: int, addresses: list<string>}  $destination
+     * @return list<string>
+     */
+    private static function destinationPinEntries(array $destination): array
+    {
+        $entries = [];
+
+        foreach ($destination['addresses'] as $address) {
+            $entries[] = $destination['host'].':'.$destination['port'].':'.self::pinAddress($address);
+        }
+
+        return $entries;
+    }
+
+    /**
+     * The address part of a pin entry must bracket IPv6 (curl 7.57.0+).
+     */
+    private static function pinAddress(string $address): string
+    {
+        return str_contains($address, ':') ? '['.$address.']' : $address;
+    }
+
+    /**
+     * The url port: explicit when present, else the scheme default.
+     *
+     * @param  array<string, mixed>  $parts
+     */
+    private static function destinationPort(array $parts, string $scheme): int
+    {
+        if (isset($parts['port']) && is_int($parts['port'])) {
+            return $parts['port'];
+        }
+
+        return $scheme === 'https' ? 443 : 80;
+    }
+
+    /**
+     * Extract every address from raw dns_get_record results (A records
+     * carry an "ip" key, AAAA records an "ipv6" key); records without an
+     * address are skipped.
+     *
+     * @param  array<int, array<string, mixed>>  $ipv4Records
+     * @param  array<int, array<string, mixed>>  $ipv6Records
+     * @return list<string>
+     */
+    public static function addressesFromDnsRecords(array $ipv4Records, array $ipv6Records): array
+    {
+        $addresses = [];
+
+        foreach ($ipv4Records as $record) {
+            if (isset($record['ip']) && is_string($record['ip']) && $record['ip'] !== '') {
+                $addresses[] = $record['ip'];
+            }
+        }
+
+        foreach ($ipv6Records as $record) {
+            if (isset($record['ipv6']) && is_string($record['ipv6']) && $record['ipv6'] !== '') {
+                $addresses[] = $record['ipv6'];
+            }
+        }
+
+        return $addresses;
     }
 
     /**

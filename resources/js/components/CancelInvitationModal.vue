@@ -28,7 +28,7 @@ const emit = defineEmits<{
 const processing = ref(false);
 
 const cancelInvitation = () => {
-    if (!props.invitation) {
+    if (!props.invitation?.code) {
         return;
     }
 

@@ -20,7 +20,8 @@ export type TeamMember = {
 };
 
 export type TeamInvitation = {
-    code: string;
+    // Omis par le back-end pour les membres sans permission cancelInvitation.
+    code?: string;
     email: string;
     role: TeamRole;
     role_label: string;
@@ -33,7 +34,7 @@ export type TeamInvitationContext = {
 };
 
 export type DashboardInvitation = {
-    code: string;
+    code?: string;
     inviterName: string;
     team: {
         name: string;

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\Team;
 use App\Services\Ai\AiProviderManager;
 use App\Services\Workflow\Handlers\Action\EmailHandler;
 use App\Services\Workflow\Handlers\Action\HttpHandler;
@@ -18,6 +19,7 @@ use App\Services\Workflow\NodeHandlerRegistry;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
@@ -64,13 +66,35 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * Configure the rate limiters (D5: the webhook key hashes the route
-     * token — the raw token never becomes a cache key).
+     * token — the raw token never becomes a cache key; S9: the run budget
+     * is per user AND team).
      */
     protected function configureRateLimiting(): void
     {
         RateLimiter::for('webhooks', fn (Request $request) => Limit::perMinute(
             (int) config('workflows.webhook.rate_limit_per_minute', 60),
         )->by('webhook:'.hash('sha256', (string) $request->route('token'))));
+
+        RateLimiter::for('workflow-run', fn (Request $request) => Limit::perMinute(
+            (int) config('workflows.rate_limits.workflow_run_per_minute', 10),
+        )->by($this->workflowRunKey($request)));
+    }
+
+    /**
+     * The workflow-run limiter key — user id AND team (S9). When the
+     * limiter runs, SubstituteBindings has already resolved the route
+     * parameter into the Team model; the raw fallback (the slug) keeps
+     * the key valid if the middleware order ever changes.
+     */
+    private function workflowRunKey(Request $request): string
+    {
+        $team = $request->route('current_team');
+
+        if ($team instanceof Team) {
+            return 'workflow-run:'.Auth::id().'|'.$team->id;
+        }
+
+        return 'workflow-run:'.Auth::id().'|'.(string) $team;
     }
 
     /**

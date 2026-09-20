@@ -79,9 +79,11 @@ class SaveWorkflowGraphRequest extends FormRequest
                 $this->validateEdgeHandles($validator, $edges, $nodesByKey);
                 $this->validateUniqueTriplets($validator, $edges);
                 $this->validateConfigWhitelist($validator, $nodes, $nodesByKey);
+                $this->validateCatalogFieldValues($validator, $nodes);
                 $this->validateNoCycle($validator, $edges);
                 $this->validateIntegrationReferences($validator, $nodes);
                 $this->validateTriggerScheduleCron($validator, $nodes);
+                $this->validateActionEmail($validator, $nodes);
             },
         ];
     }
@@ -286,6 +288,104 @@ class SaveWorkflowGraphRequest extends FormRequest
                     "nodes.{$index}.config",
                     __('The configuration field ":field" is not declared for the node type ":type".', ['field' => $field, 'type' => $node['type']]),
                 );
+            }
+        }
+    }
+
+    /**
+     * Values provided for declared fields must respect the catalog schema:
+     * a select value must be one of the declared options, a range value
+     * must be numeric within [min, max]. Only provided values are checked
+     * — empty string or null means absent, so the autosave is never
+     * blocked by fields still being edited (full executability, required
+     * fields included, is enforced at activation instead).
+     *
+     * @param  array<int, array<string, mixed>>  $nodes
+     */
+    private function validateCatalogFieldValues(Validator $validator, array $nodes): void
+    {
+        foreach ($nodes as $index => $node) {
+            $definition = NodeCatalog::definitionFor((string) $node['type']);
+
+            if ($definition === null) {
+                continue;
+            }
+
+            $config = (array) ($node['config'] ?? []);
+
+            foreach ($definition->fields as $field) {
+                $value = $config[$field['key']] ?? null;
+
+                // Absent or emptied by the builder: never an error at save.
+                if ($value === null || (is_string($value) && trim($value) === '')) {
+                    continue;
+                }
+
+                $this->validateCatalogFieldValue($validator, $index, (string) $node['type'], $field, $value);
+            }
+        }
+    }
+
+    /**
+     * Check one provided value against its declared field schema
+     * (select in options, range numeric within [min, max]).
+     *
+     * @param  array{key: string, label: string, type: 'text'|'textarea'|'select'|'range'|'integration', required: bool, placeholder: string|null, options: array<int, string>|null, min: float|null, max: float|null, step: float|null, mono: bool}  $field
+     */
+    private function validateCatalogFieldValue(Validator $validator, int $index, string $type, array $field, mixed $value): void
+    {
+        if ($field['type'] === 'select') {
+            if (! in_array((string) $value, (array) ($field['options'] ?? []), true)) {
+                $validator->errors()->add(
+                    "nodes.{$index}.config",
+                    __('La valeur du champ « :field » n’est pas une option valide pour le type « :type ».', ['field' => $field['key'], 'type' => $type]),
+                );
+            }
+
+            return;
+        }
+
+        if ($field['type'] === 'range') {
+            if (! is_numeric($value)) {
+                $validator->errors()->add(
+                    "nodes.{$index}.config",
+                    __('La valeur du champ « :field » doit être un nombre.', ['field' => $field['key']]),
+                );
+
+                return;
+            }
+
+            $min = $field['min'];
+            $max = $field['max'];
+
+            if (($min !== null && (float) $value < $min) || ($max !== null && (float) $value > $max)) {
+                $validator->errors()->add(
+                    "nodes.{$index}.config",
+                    __('La valeur du champ « :field » doit être comprise entre :min et :max.', ['field' => $field['key'], 'min' => $min, 'max' => $max]),
+                );
+            }
+        }
+    }
+
+    /**
+     * An action.email node is validated by its handler at save — same
+     * mechanism as the schedule cron: the handler is the one place of
+     * truth, shared with the engine, and errors are reported on the node
+     * config.
+     *
+     * @param  array<int, array<string, mixed>>  $nodes
+     */
+    private function validateActionEmail(Validator $validator, array $nodes): void
+    {
+        $handler = app(NodeHandlerRegistry::class)->forType('action.email');
+
+        foreach ($nodes as $index => $node) {
+            if ((string) $node['type'] !== 'action.email') {
+                continue;
+            }
+
+            foreach ($handler->validate((array) ($node['config'] ?? [])) as $error) {
+                $validator->errors()->add("nodes.{$index}.config", $error);
             }
         }
     }

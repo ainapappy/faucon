@@ -79,6 +79,32 @@ test('email validates the configuration tolerantly', function () {
         ->and(emailHandler()->validate(['to' => '{{ trigger.email }}']))->toBe([]);
 });
 
+test('email validate accepts absent, null and blank recipients', function () {
+    expect(emailHandler()->validate([]))->toBe([])
+        ->and(emailHandler()->validate(['to' => null]))->toBe([])
+        ->and(emailHandler()->validate(['to' => '   ']))->toBe([]);
+});
+
+test('email validate accepts a well formed literal recipient', function () {
+    expect(emailHandler()->validate(['to' => 'client@example.com']))->toBe([]);
+});
+
+test('email validate rejects a malformed literal recipient', function () {
+    expect(emailHandler()->validate(['to' => 'pas-un-email']))
+        ->toBe(['L’adresse destinataire n’est pas une adresse e-mail valide.']);
+});
+
+test('email validate rejects an oversized literal recipient', function () {
+    $to = str_repeat('a', 64).'@'.str_repeat('b', 63).'.'.str_repeat('c', 63).'.'.str_repeat('d', 63);
+
+    expect(mb_strlen($to))->toBe(256)
+        ->and(emailHandler()->validate(['to' => $to]))
+        ->toBe([
+            'L’adresse destinataire n’est pas une adresse e-mail valide.',
+            'L’adresse destinataire ne doit pas dépasser 255 caractères.',
+        ]);
+});
+
 test('a missing placeholder path in the recipient fails the node', function () {
     Mail::fake();
 

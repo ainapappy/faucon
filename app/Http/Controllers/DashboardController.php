@@ -41,7 +41,8 @@ final class DashboardController extends Controller
                 ->orWhere('expires_at', '>=', now()))
             ->latest()
             ->get()
-            ->map(fn (TeamInvitation $invitation) => [
+            ->map(fn (TeamInvitation $invitation): array => [
+                'id' => $invitation->id,
                 'code' => $invitation->code,
                 'inviterName' => $invitation->inviter->name,
                 'team' => [

@@ -6,6 +6,7 @@ use App\Enums\ExecutionTrigger;
 use App\Enums\WorkflowStatus;
 use App\Models\Workflow;
 use Cron\CronExpression;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 /**
@@ -43,6 +44,11 @@ class DispatchScheduledWorkflows
                     $this->startWorkflowRun->handle($workflow, ExecutionTrigger::Schedule, [], null);
 
                     $dispatched++;
+                } catch (ValidationException) {
+                    // A business refusal (exhausted team ai budget, S10) is
+                    // expected — skip this run silently and keep dispatching
+                    // the remaining workflows.
+                    return;
                 } catch (Throwable $exception) {
                     report($exception);
                 }

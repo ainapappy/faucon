@@ -19,19 +19,30 @@ type Props = {
 const props = defineProps<Props>();
 
 const open = ref(true);
-const processingCode = ref<string | null>(null);
+// Identifiant de traitement = slug d'équipe (stable et non secret) : le code
+// d'invitation est une donnée de confiance et peut être omis par le back-end
+// — il ne sert jamais de clé de liste ni d'identifiant côté client.
+const processingTeam = ref<string | null>(null);
 
 const acceptInvitation = (invitation: DashboardInvitation) => {
-    router.visit(TeamInvitationController.accept(invitation), {
-        onStart: () => (processingCode.value = invitation.code),
-        onFinish: () => (processingCode.value = null),
+    if (!invitation.code) {
+        return;
+    }
+
+    router.visit(TeamInvitationController.accept(invitation.code), {
+        onStart: () => (processingTeam.value = invitation.team.slug),
+        onFinish: () => (processingTeam.value = null),
     });
 };
 
 const declineInvitation = (invitation: DashboardInvitation) => {
-    router.visit(TeamInvitationController.decline(invitation), {
-        onStart: () => (processingCode.value = invitation.code),
-        onFinish: () => (processingCode.value = null),
+    if (!invitation.code) {
+        return;
+    }
+
+    router.visit(TeamInvitationController.decline(invitation.code), {
+        onStart: () => (processingTeam.value = invitation.team.slug),
+        onFinish: () => (processingTeam.value = null),
         onSuccess: () => {
             if (props.invitations.length === 1) {
                 open.value = false;
@@ -54,7 +65,7 @@ const declineInvitation = (invitation: DashboardInvitation) => {
             <div class="grid gap-4">
                 <div
                     v-for="invitation in props.invitations"
-                    :key="invitation.code"
+                    :key="invitation.team.slug"
                     data-test="pending-invitation-row"
                     class="rounded-lg border p-4"
                 >
@@ -70,7 +81,10 @@ const declineInvitation = (invitation: DashboardInvitation) => {
                         <Button
                             variant="secondary"
                             data-test="pending-invitation-decline"
-                            :disabled="processingCode === invitation.code"
+                            :disabled="
+                                !invitation.code ||
+                                processingTeam === invitation.team.slug
+                            "
                             @click="declineInvitation(invitation)"
                         >
                             Decline
@@ -78,7 +92,10 @@ const declineInvitation = (invitation: DashboardInvitation) => {
 
                         <Button
                             data-test="pending-invitation-accept"
-                            :disabled="processingCode === invitation.code"
+                            :disabled="
+                                !invitation.code ||
+                                processingTeam === invitation.team.slug
+                            "
                             @click="acceptInvitation(invitation)"
                         >
                             Accept

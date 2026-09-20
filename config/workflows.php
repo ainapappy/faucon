@@ -102,4 +102,21 @@ return [
         'idempotence_window_days' => (int) env('WORKFLOW_WEBHOOK_IDEMPOTENCE_WINDOW_DAYS', 1),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Rate limits (phase 11 — S9/S10)
+    |--------------------------------------------------------------------------
+    */
+
+    'rate_limits' => [
+        // Manual runs and synchronous test-runs per minute, per user AND
+        // team (S9 — named limiter workflow-run on both endpoints).
+        'workflow_run_per_minute' => (int) env('WORKFLOW_RUN_RATE_LIMIT_PER_MINUTE', 10),
+
+        // AI node calls per minute and per team (S10). Every run whose
+        // graph contains ai.* nodes consumes one token per ai node,
+        // whatever the trigger (manual run, public webhook, scheduler).
+        'ai_calls_per_minute' => (int) env('WORKFLOW_AI_RATE_LIMIT_PER_MINUTE', 30),
+    ],
+
 ];

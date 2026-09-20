@@ -30,14 +30,36 @@ final class EmailHandler implements NodeHandler
 
     /**
      * Tolerant on purpose (phase 3 model): empty or placeholder fields are
-     * accepted at save time and fail at execution when they matter.
+     * accepted at save time and fail at execution when they matter. Only
+     * a literal recipient is checked here — an interpolation placeholder
+     * resolves at execution time, where execute() re-validates the result.
      *
      * @param  array<string, mixed>  $config
      * @return list<string>
      */
     public function validate(array $config): array
     {
-        return [];
+        $to = $config['to'] ?? null;
+
+        if (! is_string($to) || trim($to) === '') {
+            return [];
+        }
+
+        if (str_contains($to, '{{')) {
+            return [];
+        }
+
+        $errors = [];
+
+        if (filter_var($to, FILTER_VALIDATE_EMAIL) === false) {
+            $errors[] = __('L’adresse destinataire n’est pas une adresse e-mail valide.');
+        }
+
+        if (mb_strlen($to) > 255) {
+            $errors[] = __('L’adresse destinataire ne doit pas dépasser 255 caractères.');
+        }
+
+        return $errors;
     }
 
     /**

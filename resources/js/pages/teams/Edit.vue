@@ -265,7 +265,7 @@ const confirmCancelInvitation = (invitation: TeamInvitation) => {
             <div class="space-y-3">
                 <div
                     v-for="invitation in invitations"
-                    :key="invitation.code"
+                    :key="invitation.email"
                     data-test="invitation-row"
                     class="flex items-center justify-between rounded-lg border p-4"
                 >

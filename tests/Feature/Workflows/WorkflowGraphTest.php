@@ -10,7 +10,7 @@ test('saving the graph persists nodes and edges', function () {
     $payload = graphPayload(
         nodes: [
             ['key' => 'n1', 'type' => 'trigger.webhook', 'positionX' => 60, 'positionY' => 200],
-            ['key' => 'n2', 'type' => 'ai.classification', 'config' => ['model' => 'claude-haiku'], 'positionX' => 330, 'positionY' => 150],
+            ['key' => 'n2', 'type' => 'ai.classification', 'config' => ['model' => 'fake/demo'], 'positionX' => 330, 'positionY' => 150],
             ['key' => 'n3', 'type' => 'action.email', 'positionX' => 600, 'positionY' => 100],
         ],
         edges: [
