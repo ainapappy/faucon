@@ -7,6 +7,7 @@ import {
     Maximize2,
     Minus,
     Play,
+    PlayCircle,
     Plus,
     Terminal,
     Workflow,
@@ -34,6 +35,7 @@ const props = defineProps<{
 const emit = defineEmits<{
     back: [];
     run: [];
+    execute: [];
     zoomIn: [];
     zoomOut: [];
     fitView: [];
@@ -162,6 +164,17 @@ const saveLabel = computed(() => {
                 @click="emit('toggleJournal')"
             >
                 <Terminal class="h-4 w-4" />
+            </Button>
+
+            <Button
+                v-if="canUpdateWorkflow && status === 'active'"
+                variant="outline"
+                data-test="builder-execute"
+                aria-label="Exécuter le workflow en file d'attente"
+                @click="emit('execute')"
+            >
+                <PlayCircle class="h-3.5 w-3.5" />
+                Exécuter
             </Button>
 
             <Button

@@ -92,7 +92,7 @@ cohérent et committable.
 | 4   | Workflow Engine                 | Validation, registre de handlers, variables, traversal, test run           |   ✅   |
 | 5   | Actions & intégrations          | Nodes HTTP / Email, webhook idempotent, credentials chiffrés, SSRF         |   ✅   |
 | 6   | AI Provider & AI Nodes          | Abstraction providers (OpenAI / Anthropic), 5 nodes IA, structured output  |   ✅   |
-| 7   | Exécution & queue               | Exécutions persistées, jobs, retries, timeout, cancellation, planification |   🚧   |
+| 7   | Exécution & queue               | Exécutions persistées, jobs, retries, timeout, cancellation, planification |   ✅   |
 | 8   | Logs & monitoring               | Logs par node, redaction des secrets, timeline d'exécution, rétention      |   ⏳   |
 | 9   | Templates                       | Templates système / équipe, duplication, publication, galerie              |   ⏳   |
 | 10  | Dashboard & UX                  | KPIs, notifications in-app, passe UX et responsive                         |   ⏳   |

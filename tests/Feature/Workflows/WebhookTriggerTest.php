@@ -1,11 +1,14 @@
 <?php
 
 use App\Actions\Workflows\SaveWorkflowGraph;
+use App\Jobs\RunWorkflowJob;
 use App\Models\WebhookEndpoint;
 use App\Models\WebhookRequest;
 use App\Models\Workflow;
+use App\Models\WorkflowExecution;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 
 /**
@@ -48,7 +51,9 @@ function webhookHttpEndpoint(): WebhookEndpoint
     return $workflow->webhookEndpoint()->firstOrFail();
 }
 
-test('a valid webhook post executes the graph and returns the execution result', function () {
+test('a valid webhook post dispatches a queued execution and answers 202', function () {
+    Queue::fake();
+
     $endpoint = webhookEndpointWithGraph();
 
     $response = $this->postJson(route('webhooks.handle', ['token' => $endpoint->token]), [
@@ -56,24 +61,19 @@ test('a valid webhook post executes the graph and returns the execution result',
         'id' => 42,
     ]);
 
-    $response->assertOk()->assertJsonStructure([
-        'status',
-        'durationMs',
-        'nodes' => [
-            '*' => ['nodeKey', 'type', 'name', 'status', 'durationMs', 'output', 'error'],
-        ],
-        'errors',
-    ]);
+    $response->assertStatus(202)->assertJson(['status' => 'pending']);
 
-    $payload = $response->json();
+    $executionId = $response->json('execution_id');
 
-    expect($payload['status'])->toBe('completed')
-        ->and($payload['errors'])->toBe([])
-        ->and($payload['nodes'][0]['type'])->toBe('trigger.webhook')
-        ->and($payload['nodes'][0]['status'])->toBe('ok')
-        ->and($payload['nodes'][0]['output'])->toBe(['event' => 'order.created', 'id' => 42])
-        ->and($payload['nodes'][1]['type'])->toBe('data.output')
-        ->and($payload['nodes'][1]['status'])->toBe('ok');
+    expect($executionId)->toBeInt();
+
+    Queue::assertPushed(RunWorkflowJob::class, fn (RunWorkflowJob $job) => $job->executionId === $executionId);
+
+    $execution = WorkflowExecution::query()->findOrFail($executionId);
+
+    expect($execution->status->value)->toBe('pending')
+        ->and($execution->triggered_by->value)->toBe('webhook')
+        ->and($execution->input)->toBe(['event' => 'order.created', 'id' => 42]);
 });
 
 test('an unknown token returns the same 404 shape as any other ineligibility', function () {
@@ -204,8 +204,7 @@ test('an oversized X-Request-Id header is refused with 422', function () {
 });
 
 test('a duplicated X-Request-Id triggers a single execution', function () {
-    Http::preventStrayRequests();
-    Http::fake(['https://203.0.113.10/*' => Http::response('ok', 200)]);
+    Queue::fake();
 
     $endpoint = webhookHttpEndpoint();
 
@@ -217,7 +216,7 @@ test('a duplicated X-Request-Id triggers a single execution', function () {
         'X-Request-Id' => 'req-abc-123',
     ]);
 
-    $first->assertOk();
+    $first->assertStatus(202);
     $second->assertOk();
 
     expect($second->json())->toBe(['status' => 'duplicate'])
@@ -225,31 +224,32 @@ test('a duplicated X-Request-Id triggers a single execution', function () {
         ->and(WebhookRequest::query()->first()->token_hash)->toBe($endpoint->token_hash)
         ->and(WebhookRequest::query()->first()->request_id_hash)->toBe(hash('sha256', 'req-abc-123'));
 
-    Http::assertSentCount(1);
+    Queue::assertPushed(RunWorkflowJob::class, 1);
 });
 
-test('requests without an X-Request-Id execute every time', function () {
-    Http::preventStrayRequests();
-    Http::fake(['https://203.0.113.10/*' => Http::response('ok', 200)]);
+test('requests without an X-Request-Id dispatch every time', function () {
+    Queue::fake();
 
     $endpoint = webhookHttpEndpoint();
 
-    $this->postJson(route('webhooks.handle', ['token' => $endpoint->token]), ['event' => 'a'])->assertOk();
-    $this->postJson(route('webhooks.handle', ['token' => $endpoint->token]), ['event' => 'a'])->assertOk();
+    $this->postJson(route('webhooks.handle', ['token' => $endpoint->token]), ['event' => 'a'])->assertStatus(202);
+    $this->postJson(route('webhooks.handle', ['token' => $endpoint->token]), ['event' => 'a'])->assertStatus(202);
 
     expect(WebhookRequest::query()->count())->toBe(0);
 
-    Http::assertSentCount(2);
+    Queue::assertPushed(RunWorkflowJob::class, 2);
 });
 
 test('the webhook endpoint is rate limited per token', function () {
     config(['workflows.webhook.rate_limit_per_minute' => 2]);
 
+    Queue::fake();
+
     $endpoint = webhookEndpointWithGraph();
     RateLimiter::clear('webhook:'.hash('sha256', $endpoint->token));
 
-    $this->postJson(route('webhooks.handle', ['token' => $endpoint->token]), ['a' => 1])->assertOk();
-    $this->postJson(route('webhooks.handle', ['token' => $endpoint->token]), ['a' => 1])->assertOk();
+    $this->postJson(route('webhooks.handle', ['token' => $endpoint->token]), ['a' => 1])->assertStatus(202);
+    $this->postJson(route('webhooks.handle', ['token' => $endpoint->token]), ['a' => 1])->assertStatus(202);
 
     $this->postJson(route('webhooks.handle', ['token' => $endpoint->token]), ['a' => 1])->assertStatus(429);
 });

@@ -6,6 +6,7 @@ use App\Models\Integration;
 use App\Models\Team;
 use App\Services\Workflow\GraphValidator;
 use App\Services\Workflow\NodeCatalog;
+use App\Services\Workflow\NodeHandlerRegistry;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -80,6 +81,7 @@ class SaveWorkflowGraphRequest extends FormRequest
                 $this->validateConfigWhitelist($validator, $nodes, $nodesByKey);
                 $this->validateNoCycle($validator, $edges);
                 $this->validateIntegrationReferences($validator, $nodes);
+                $this->validateTriggerScheduleCron($validator, $nodes);
             },
         ];
     }
@@ -284,6 +286,28 @@ class SaveWorkflowGraphRequest extends FormRequest
                     "nodes.{$index}.config",
                     __('The configuration field ":field" is not declared for the node type ":type".', ['field' => $field, 'type' => $node['type']]),
                 );
+            }
+        }
+    }
+
+    /**
+     * A trigger.schedule node carries a required, valid cron expression —
+     * validated by the handler itself (one place of truth, shared with the
+     * engine) and reported on the node config.
+     *
+     * @param  array<int, array<string, mixed>>  $nodes
+     */
+    private function validateTriggerScheduleCron(Validator $validator, array $nodes): void
+    {
+        $handler = app(NodeHandlerRegistry::class)->forType('trigger.schedule');
+
+        foreach ($nodes as $index => $node) {
+            if ((string) $node['type'] !== 'trigger.schedule') {
+                continue;
+            }
+
+            foreach ($handler->validate((array) ($node['config'] ?? [])) as $error) {
+                $validator->errors()->add("nodes.{$index}.config", $error);
             }
         }
     }

@@ -247,7 +247,7 @@ test('an exhausted clock budget fails the run with a timeout error', function ()
         ->and($result->errors)->toHaveCount(1)
         ->and($result->errors[0]->nodeKey)->toBeNull()
         ->and($result->errors[0]->reason)->toBe('timeout')
-        ->and($result->errors[0]->message)->toBe('Le test a dépassé la durée maximale de 0 s.');
+        ->and($result->errors[0]->message)->toBe('L’exécution a dépassé la durée maximale de 0 s.');
 });
 
 test('a type registered beyond the catalog runs without touching the runner', function () {

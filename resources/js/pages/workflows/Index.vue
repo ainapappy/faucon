@@ -13,7 +13,9 @@ import {
     useWorkflowList,
     type ToggleStatusResult,
 } from '@/composables/useWorkflowList';
-import { destroy, edit, index, update } from '@/routes/workflows';
+import { destroy, index, update } from '@/routes/workflows';
+import { index as executionsIndexUrl } from '@/routes/workflow-executions';
+import runWorkflowUrl from '@/actions/App/Http/Controllers/Workflows/RunWorkflowController';
 import type {
     NodeTypeCatalog,
     WorkflowListItem,
@@ -107,14 +109,45 @@ const list = useWorkflowList({
     toggleRequest,
 });
 
-/** « Exécuter maintenant » → builder avec ouverture de la modale Tester (?run=1, AM2). */
+/** « Exécuter maintenant » → run en queue (phase 7) : toast de dispatch + lien vers l'exécution. */
 function runNow(workflow: WorkflowListItem): void {
-    router.visit(
-        edit(
-            { current_team: teamSlug.value, workflow: workflow.id },
-            { query: { run: 1 } },
-        ).url,
-    );
+    const http = useHttp();
+
+    http.post(
+        runWorkflowUrl({ current_team: teamSlug.value, workflow: workflow.id })
+            .url,
+        {
+            onSuccess: () => {
+                toast.success(`Exécution lancée`, {
+                    description: `${workflow.name} — suivez son avancement en direct.`,
+                    action: {
+                        label: 'Voir',
+                        onClick: () => {
+                            router.visit(
+                                executionsIndexUrl({
+                                    current_team: teamSlug.value,
+                                }).url,
+                            );
+                        },
+                    },
+                });
+            },
+            onError: (errors) => {
+                toast.error('Exécution impossible', {
+                    description: Object.values(errors).join(' ') || undefined,
+                });
+            },
+            onHttpException: (response) => {
+                toast.error('Exécution impossible', {
+                    description: `Erreur ${response.status} — réessayez.`,
+                });
+            },
+        },
+    ).catch(() => {
+        toast.error('Exécution impossible', {
+            description: 'Erreur réseau.',
+        });
+    });
 }
 
 /** Suppression : visite DELETE + flash toast servi par le contrôleur. */

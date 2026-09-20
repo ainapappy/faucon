@@ -25,6 +25,41 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Queued executions (phase 7 — RunWorkflowJob)
+    |--------------------------------------------------------------------------
+    */
+
+    'execution' => [
+        // Runner budget for ONE attempt of a queued run. The synchronous
+        // test-run keeps its own shorter budget (WorkflowRunner default).
+        'timeout_ms' => (int) env('WORKFLOW_EXECUTION_TIMEOUT_MS', 120000),
+
+        // Total attempts (initial + retries). Deliberately conservative:
+        // a retry re-runs the whole graph, so non-idempotent side effects
+        // (emails) repeat.
+        'max_tries' => (int) env('WORKFLOW_EXECUTION_MAX_TRIES', 2),
+
+        // Seconds to wait between attempts (config only — not env-bound).
+        // Index follows the attempt that just failed; last value repeats.
+        'backoff' => [30],
+
+        // Lifetime (seconds) of the cancellation flag in the cache. Must
+        // comfortably exceed the longest possible attempt.
+        'cancel_ttl' => (int) env('WORKFLOW_EXECUTION_CANCEL_TTL', 3600),
+
+        // Node error reasons considered transient — a failed run whose
+        // errors ALL carry one of these reasons is released for a retry.
+        // Everything else (validation, SSRF, config, content…) is final.
+        'retryable_reasons' => [
+            'network_error',
+            'provider_timeout',
+            'provider_unreachable',
+            'provider_rate_limited',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Incoming webhooks (trigger.webhook — used from Lot D onward)
     |--------------------------------------------------------------------------
     */

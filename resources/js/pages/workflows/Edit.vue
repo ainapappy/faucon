@@ -29,6 +29,8 @@ import {
 } from '@/composables/useWorkflowTestRun';
 import { upstreamVariablePaths } from '@/lib/aiVariables';
 import workflows, { index as workflowsIndex } from '@/routes/workflows';
+import { index as executionsIndexUrl } from '@/routes/workflow-executions';
+import runWorkflowUrl from '@/actions/App/Http/Controllers/Workflows/RunWorkflowController';
 import type {
     ExecutionResult,
     IntegrationSummary,
@@ -322,6 +324,57 @@ async function goBack(): Promise<void> {
 /* ---- Test réel du workflow (phase 4, U2) : modale d'échantillon → run ---- */
 const testRunHttp = useHttp<{ input: string }, ExecutionResult>({ input: '' });
 
+/*
+ * ---- Exécution en queue (phase 7) : dispatch + toast avec lien ----
+ * Contrairement au test ci-dessus (synchrone, tiroir), l'exécution part en
+ * file : la réponse est immédiate, le suivi se fait sur la page Exécutions.
+ */
+const executeHttp = useHttp({});
+
+function executeWorkflow(): void {
+    executeHttp
+        .post(
+            runWorkflowUrl({
+                current_team: teamSlug.value,
+                workflow: props.workflow.id,
+            }).url,
+            {
+                onSuccess: () => {
+                    toast.success('Exécution lancée', {
+                        description:
+                            'Suivez son avancement sur la page Exécutions.',
+                        action: {
+                            label: 'Voir',
+                            onClick: () => {
+                                router.visit(
+                                    executionsIndexUrl({
+                                        current_team: teamSlug.value,
+                                    }).url,
+                                );
+                            },
+                        },
+                    });
+                },
+                onError: (errors) => {
+                    toast.error('Exécution impossible', {
+                        description:
+                            Object.values(errors).join(' ') || undefined,
+                    });
+                },
+                onHttpException: (response) => {
+                    toast.error('Exécution impossible', {
+                        description: `Erreur ${response.status} — réessayez.`,
+                    });
+                },
+            },
+        )
+        .catch(() => {
+            toast.error('Exécution impossible', {
+                description: 'Erreur réseau.',
+            });
+        });
+}
+
 async function postTestRun(
     sample: Record<string, unknown>,
 ): Promise<ExecutionResult> {
@@ -499,6 +552,7 @@ onBeforeUnmount(() => {
             :can-update-workflow="permissions.canUpdateWorkflow"
             @back="goBack"
             @run="openTestDialog"
+            @execute="executeWorkflow"
             @zoom-in="() => zoomIn()"
             @zoom-out="() => zoomOut()"
             @fit-view="() => fitView()"

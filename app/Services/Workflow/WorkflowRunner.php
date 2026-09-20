@@ -15,7 +15,9 @@ use Throwable;
  *
  * Knows no node type: branching, terminality and aliasing are carried by the
  * NodeResult flags (branch/isTerminal/exposeAs) announced by the handlers.
- * Callable from a job in phase 7 without any HTTP dependency.
+ * Pure and in-memory: since phase 7 it is called by RunWorkflowJob (queued,
+ * with a cancellation hook and a per-run budget) as well as by the
+ * synchronous test-run, without any HTTP dependency.
  */
 final class WorkflowRunner
 {
@@ -31,10 +33,19 @@ final class WorkflowRunner
      * @param  list<array{key: string, type: string, name: string, config: array<string, mixed>}>  $nodes
      * @param  list<array{sourceNodeKey: string, targetNodeKey: string, sourceHandle: string|null}>  $edges
      * @param  array<string, mixed>  $sampleInput  Input of the trigger node.
+     * @param  (callable(string): bool)|null  $beforeNode  Called before each node; returning
+     *                                                     true stops the run between nodes
+     *                                                     (queued cancellation, phase 7).
+     * @param  int|null  $timeoutMs  Override of the constructor budget for one run — the
+     *                               queued job passes the async budget, the synchronous
+     *                               test-run keeps the constructor default.
+     * @return ExecutionResult Status is 'completed', 'failed' or 'cancelled' (the runner
+     *                         never persists anything; the job maps the status).
      */
-    public function run(array $nodes, array $edges, array $sampleInput): ExecutionResult
+    public function run(array $nodes, array $edges, array $sampleInput, ?callable $beforeNode = null, ?int $timeoutMs = null): ExecutionResult
     {
         $startedAt = hrtime(true);
+        $budgetMs = $timeoutMs ?? $this->timeoutMs;
 
         $validationErrors = $this->validator->validate($nodes, $edges);
 
@@ -66,16 +77,23 @@ final class WorkflowRunner
 
         $seen[$triggerKey] = true;
         $queue = [$triggerKey];
+        $cancelled = false;
 
         while ($queue !== []) {
             $key = array_shift($queue);
 
-            if ($this->elapsedMs($startedAt) >= $this->timeoutMs) {
+            if ($beforeNode !== null && $beforeNode($key)) {
+                $cancelled = true;
+
+                break;
+            }
+
+            if ($this->elapsedMs($startedAt) >= $budgetMs) {
                 $runErrors[] = new ExecutionError(
                     nodeKey: null,
                     type: 'validation',
                     reason: 'timeout',
-                    message: __('Le test a dépassé la durée maximale de :seconds s.', ['seconds' => (int) ceil($this->timeoutMs / 1000)]),
+                    message: __('L’exécution a dépassé la durée maximale de :seconds s.', ['seconds' => (int) ceil($budgetMs / 1000)]),
                 );
 
                 break;
@@ -201,7 +219,11 @@ final class WorkflowRunner
             }
         }
 
-        $status = $runErrors === [] ? 'completed' : 'failed';
+        $status = match (true) {
+            $cancelled => 'cancelled',
+            $runErrors !== [] => 'failed',
+            default => 'completed',
+        };
 
         return new ExecutionResult(
             status: $status,

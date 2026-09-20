@@ -4,22 +4,25 @@ namespace App\Actions\Workflows;
 
 use App\Data\Workflow\ExecutionResult;
 use App\Models\Workflow;
-use App\Models\WorkflowEdge;
-use App\Models\WorkflowNode;
+use App\Services\Workflow\WorkflowGraphMapper;
 use App\Services\Workflow\WorkflowRunner;
 
 /**
- * Load the persisted graph, map it to the engine shapes and run it.
+ * Load the persisted graph, map it via the shared mapper and run it.
  *
  * Reused as-is by the public webhook endpoint (WebhookController) and
  * by the builder test-run: two triggers of the same engine (D19).
  *
- * The mapping is inline with PHPDoc shapes: a shared GraphSnapshot DTO would
- * wait for phase 7 (execution snapshot) to justify itself (YAGNI).
+ * Since phase 7 the graph mapping lives in WorkflowGraphMapper, shared
+ * with RunWorkflowJob — the queued run maps the graph exactly like the
+ * synchronous test-run does.
  */
 class TestRunWorkflow
 {
-    public function __construct(private readonly WorkflowRunner $runner) {}
+    public function __construct(
+        private readonly WorkflowRunner $runner,
+        private readonly WorkflowGraphMapper $mapper,
+    ) {}
 
     /**
      * Run the workflow graph with the given sample input.
@@ -28,20 +31,7 @@ class TestRunWorkflow
      */
     public function handle(Workflow $workflow, array $sampleInput): ExecutionResult
     {
-        $workflow->loadMissing(['nodes', 'edges']);
-
-        $nodes = array_values($workflow->nodes->map(fn (WorkflowNode $node): array => [
-            'key' => $node->key,
-            'type' => $node->type,
-            'name' => $node->name,
-            'config' => $node->config ?? [],
-        ])->all());
-
-        $edges = array_values($workflow->edges->map(fn (WorkflowEdge $edge): array => [
-            'sourceNodeKey' => $edge->source_node_key,
-            'targetNodeKey' => $edge->target_node_key,
-            'sourceHandle' => $edge->source_handle,
-        ])->all());
+        [$nodes, $edges] = $this->mapper->map($workflow);
 
         return $this->runner->run($nodes, $edges, $sampleInput);
     }

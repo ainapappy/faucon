@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers\Workflows;
 
-use App\Actions\Workflows\TestRunWorkflow;
+use App\Actions\Workflows\StartWorkflowRun;
+use App\Enums\ExecutionTrigger;
 use App\Enums\WorkflowStatus;
 use App\Http\Controllers\Controller;
 use App\Models\WebhookEndpoint;
@@ -15,24 +16,26 @@ use Illuminate\Http\Request;
 /**
  * The public webhook endpoint (POST /webhooks/{token}, D19).
  *
- * The flow is: hash lookup, eligibility, payload bounds, idempotence,
- * synchronous run through the shared TestRunWorkflow action. Every
+ * The flow is: hash lookup, eligibility, payload bounds, idempotence, then
+ * a QUEUED run through StartWorkflowRun — the endpoint answers 202 with the
+ * execution id and never blocks on the engine (phase 7). Every
  * ineligibility answers the same 404 (no state leak); no log ever
- * carries the token or the url.
+ * carries the token or the url; the idempotence journal guarantees a
+ * single dispatch per X-Request-Id.
  */
 final class WebhookController extends Controller
 {
     private const NotFoundBody = ['message' => 'Not found.'];
 
     /**
-     * Decoded payload, memoized between the bounds check and the run.
+     * Decoded payload, memoized between the bounds check and the dispatch.
      *
      * @var array<string, mixed>|null
      */
     private ?array $payload = null;
 
     public function __construct(
-        private readonly TestRunWorkflow $testRunWorkflow,
+        private readonly StartWorkflowRun $startWorkflowRun,
     ) {}
 
     public function __invoke(Request $request): JsonResponse
@@ -81,9 +84,17 @@ final class WebhookController extends Controller
             }
         }
 
-        return response()->json(
-            $this->testRunWorkflow->handle($workflow, $this->payload ?? [])->toArray(),
+        $execution = $this->startWorkflowRun->handle(
+            $workflow,
+            ExecutionTrigger::Webhook,
+            $this->payload ?? [],
+            null,
         );
+
+        return response()->json([
+            'status' => 'pending',
+            'execution_id' => $execution->id,
+        ], 202);
     }
 
     /**

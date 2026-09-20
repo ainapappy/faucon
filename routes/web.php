@@ -5,11 +5,14 @@ use App\Http\Controllers\Integrations\IntegrationController;
 use App\Http\Controllers\Integrations\TestIntegrationConnectionController;
 use App\Http\Controllers\Teams\TeamInvitationController;
 use App\Http\Controllers\Workflows\RegenerateWebhookTokenController;
+use App\Http\Controllers\Workflows\RunWorkflowController;
 use App\Http\Controllers\Workflows\SaveWorkflowGraphController;
 use App\Http\Controllers\Workflows\TestRunWorkflowController;
 use App\Http\Controllers\Workflows\WebhookController;
 use App\Http\Controllers\Workflows\WebhookUrlController;
 use App\Http\Controllers\Workflows\WorkflowController;
+use App\Http\Controllers\Workflows\WorkflowExecution\CancelWorkflowExecutionController;
+use App\Http\Controllers\Workflows\WorkflowExecution\WorkflowExecutionController;
 use App\Http\Middleware\EnsureTeamMembership;
 use Illuminate\Support\Facades\Route;
 
@@ -28,6 +31,10 @@ Route::prefix('{current_team}')
         Route::post('workflows/{workflow}/duplicate', [WorkflowController::class, 'duplicate'])->name('workflows.duplicate');
         Route::put('workflows/{workflow}/graph', SaveWorkflowGraphController::class)->name('workflows.graph.update');
         Route::post('workflows/{workflow}/test-run', TestRunWorkflowController::class)->name('workflows.test-run');
+        Route::post('workflows/{workflow}/run', RunWorkflowController::class)->name('workflows.run');
+
+        Route::get('workflow-executions', [WorkflowExecutionController::class, 'index'])->name('workflow-executions.index');
+        Route::post('workflow-executions/{execution}/cancel', CancelWorkflowExecutionController::class)->name('workflow-executions.cancel');
 
         Route::get('workflows/{workflow}/webhook-url', WebhookUrlController::class)->name('workflows.webhook.url');
         Route::post('workflows/{workflow}/webhook-regenerate', RegenerateWebhookTokenController::class)->name('workflows.webhook.regenerate');

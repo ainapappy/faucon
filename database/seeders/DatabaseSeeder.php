@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             DemoUserSeeder::class,
             DemoWorkflowSeeder::class,
+            DemoWorkflowExecutionSeeder::class,
             DemoIntegrationSeeder::class,
         ]);
 

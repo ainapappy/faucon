@@ -136,8 +136,12 @@ export type NodeRunStatus = 'idle' | 'running' | 'ok' | 'error' | 'skipped';
 /** Machine à états du test du workflow (composable `useWorkflowTestRun`). */
 export type TestRunState = 'idle' | 'running' | 'completed' | 'failed';
 
-/** Statut global d'un run renvoyé par le moteur (un échec de validation est un résultat, pas une erreur HTTP). */
-export type ExecutionStatus = 'completed' | 'failed';
+/**
+ * Statut global d'un run renvoyé par le moteur. `cancelled` n'arrive que
+ * sur les runs en queue (cancellation entre nodes, phase 7) — jamais sur
+ * un test-run synchrone.
+ */
+export type EngineRunStatus = 'completed' | 'failed' | 'cancelled';
 
 /**
  * Erreur explicite du moteur — miroir du DTO `ExecutionError` PHP.
@@ -174,7 +178,7 @@ export type NodeRunResult = {
  * les non exécutés en fin de liste en `skipped`.
  */
 export type ExecutionResult = {
-    status: ExecutionStatus;
+    status: EngineRunStatus;
     /** Durée murale totale du run (validation incluse), en millisecondes. */
     durationMs: number;
     nodes: NodeRunResult[];

@@ -5,7 +5,9 @@ namespace App\Data\Workflow;
 /**
  * Complete result of a run.
  *
- * The persisted states (pending/running/cancelled) belong to phase 7.
+ * status is 'completed', 'failed' or 'cancelled' — the latter since phase 7
+ * (between-nodes cancellation): the runner stays pure, the queued job maps
+ * the result onto the persisted ExecutionStatus transitions.
  */
 final readonly class ExecutionResult
 {

@@ -111,4 +111,14 @@ class Workflow extends Model
     {
         return $this->hasOne(WebhookEndpoint::class);
     }
+
+    /**
+     * Get the persisted, queued executions of the workflow (phase 7).
+     *
+     * @return HasMany<WorkflowExecution, $this>
+     */
+    public function executions(): HasMany
+    {
+        return $this->hasMany(WorkflowExecution::class);
+    }
 }
