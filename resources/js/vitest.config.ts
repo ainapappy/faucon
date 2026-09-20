@@ -14,6 +14,7 @@ export default defineConfig({
         environment: 'node',
         include: [
             'resources/js/composables/__tests__/**/*.spec.ts',
+            'resources/js/lib/__tests__/**/*.spec.ts',
             'resources/js/routes/__tests__/**/*.spec.ts',
         ],
     },

@@ -64,9 +64,9 @@ Frontend :
 
 ### Routes
 
-| Méthode | URI | Nom |
-| --- | --- | --- |
-| POST | `{current_team}/workflows/{workflow}/test-run` | `workflows.test-run` |
+| Méthode | URI                                            | Nom                  |
+| ------- | ---------------------------------------------- | -------------------- |
+| POST    | `{current_team}/workflows/{workflow}/test-run` | `workflows.test-run` |
 
 `php artisan wayfinder:generate --with-form` exécuté : `workflows.testRun({current_team, workflow})` dans `@/routes/workflows` + action typée `@/actions/App/Http/Controllers/Workflows/TestRunWorkflowController` (`.post`/`.form`). Le front n'a aucune URL codée en dur.
 

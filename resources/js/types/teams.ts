@@ -52,6 +52,9 @@ export type TeamPermissions = {
     canCreateWorkflow: boolean;
     canUpdateWorkflow: boolean;
     canDeleteWorkflow: boolean;
+    canCreateIntegration: boolean;
+    canUpdateIntegration: boolean;
+    canDeleteIntegration: boolean;
 };
 
 export type RoleOption = {

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { KeyRound } from '@lucide/vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
+import { index as integrations } from '@/routes/integrations';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import { index as teams } from '@/routes/teams';
@@ -23,6 +25,11 @@ const sidebarNavItems: NavItem[] = [
     {
         title: 'Teams',
         href: teams(),
+    },
+    {
+        title: 'Intégrations',
+        href: integrations(),
+        icon: KeyRound,
     },
     {
         title: 'Appearance',
@@ -57,7 +64,11 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
                         as-child
                     >
                         <Link :href="item.href">
-                            <component :is="item.icon" class="h-4 w-4" />
+                            <component
+                                :is="item.icon"
+                                v-if="item.icon"
+                                class="h-4 w-4"
+                            />
                             {{ item.title }}
                         </Link>
                     </Button>

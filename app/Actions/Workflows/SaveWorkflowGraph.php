@@ -7,8 +7,13 @@ use Illuminate\Support\Facades\DB;
 
 class SaveWorkflowGraph
 {
+    public function __construct(
+        private readonly EnsureWebhookEndpoint $ensureWebhookEndpoint,
+    ) {}
+
     /**
-     * Replace the whole graph of the workflow transactionally.
+     * Replace the whole graph of the workflow transactionally, then keep
+     * the webhook endpoint in sync with the saved graph (D20).
      *
      * @param  array<int, array{key: string, type: string, name: string, config: array<string, mixed>, positionX: int|float, positionY: int|float}>  $nodes
      * @param  array<int, array{sourceNodeKey: string, targetNodeKey: string, sourceHandle: string|null}>  $edges
@@ -34,5 +39,7 @@ class SaveWorkflowGraph
                 'source_handle' => $edge['sourceHandle'],
             ])->all());
         });
+
+        $this->ensureWebhookEndpoint->handle($workflow);
     }
 }

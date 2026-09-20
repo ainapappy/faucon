@@ -15,6 +15,8 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import WebhookInspectorSection from '@/components/builder/WebhookInspectorSection.vue';
+import TextLink from '@/components/TextLink.vue';
 import type { BuilderNode } from '@/composables/useWorkflowBuilder';
 import { formatNodeOutput } from '@/composables/useWorkflowTestRun';
 import {
@@ -22,7 +24,10 @@ import {
     nodeCategoryExamples,
 } from '@/lib/nodeCategories';
 import { nodeIcon } from '@/lib/nodeIcons';
+import { nodeOptionLabel } from '@/lib/nodeOptionLabels';
+import { index as integrationsIndex } from '@/routes/integrations';
 import type {
+    IntegrationSummary,
     NodeRunResult,
     NodeTypeDefinition,
     WorkflowStatus,
@@ -36,6 +41,10 @@ const props = defineProps<{
     canUpdateWorkflow?: boolean;
     /** Résultat réel du node sélectionné au dernier test (`null` = pas de run). */
     nodeResult: NodeRunResult | null;
+    /** Intégrations de l'équipe — sources des selects `integration` (sans credentials). */
+    integrations: IntegrationSummary[];
+    /** Workflow édité — endpoints webhook de la section dédiée (D20). */
+    workflowId: number;
 }>();
 
 const emit = defineEmits<{
@@ -68,6 +77,16 @@ const colorToken = computed(
     () => category.value?.colorToken ?? 'var(--muted-foreground)',
 );
 
+/*
+ * Section webhook dédiée (D18) : le SEUL littéral de type de node du front.
+ * La généricité passerait par un champ `extras` du catalogue —
+ * over-engineering pour un seul node ; les définitions des autres types
+ * restent rendues génériquement depuis le schéma.
+ */
+const isWebhookNode = computed(
+    () => props.definition?.type === 'trigger.webhook',
+);
+
 const configOf = (fieldKey: string): string | number => {
     const value = props.node?.config[fieldKey];
     return typeof value === 'boolean' || value === undefined
@@ -89,6 +108,22 @@ const setField = (fieldKey: string, value: string | number): void => {
     if (props.node) {
         emit('updateNodeConfig', props.node.key, fieldKey, value);
     }
+};
+
+/*
+ * Champ `integration` : reka-ui refuse une option de valeur vide — sentinel
+ * pour l'état « aucune intégration », converti en chaîne vide dans la config
+ * (le backend traite `''` comme absent).
+ */
+const NO_INTEGRATION = '__no_integration__';
+
+const integrationValueOf = (fieldKey: string): string => {
+    const raw = configOf(fieldKey);
+    return raw === '' ? NO_INTEGRATION : String(raw);
+};
+
+const setIntegrationField = (fieldKey: string, value: string): void => {
+    setField(fieldKey, value === NO_INTEGRATION ? '' : value);
 };
 
 const setRangeField = (fieldKey: string, event: Event): void => {
@@ -214,10 +249,57 @@ const outputJson = computed(() =>
                                 :key="option"
                                 :value="option"
                             >
-                                {{ option }}
+                                {{ nodeOptionLabel(option) }}
                             </SelectItem>
                         </SelectContent>
                     </Select>
+
+                    <!-- Intégration référencée par id (D16) : liste en prop, jamais de credentials -->
+                    <template v-else-if="field.type === 'integration'">
+                        <Select
+                            :model-value="integrationValueOf(field.key)"
+                            :disabled="!canUpdateWorkflow"
+                            @update:model-value="
+                                (value) =>
+                                    setIntegrationField(
+                                        field.key,
+                                        String(value),
+                                    )
+                            "
+                        >
+                            <SelectTrigger
+                                :id="`node-field-${field.key}`"
+                                class="w-full"
+                            >
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem :value="NO_INTEGRATION">
+                                    — Aucune —
+                                </SelectItem>
+                                <SelectItem
+                                    v-for="integration in integrations"
+                                    :key="integration.id"
+                                    :value="String(integration.id)"
+                                >
+                                    {{ integration.name }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <p
+                            v-if="integrations.length === 0"
+                            class="text-muted-foreground text-xs"
+                            data-test="inspector-integration-empty"
+                        >
+                            Aucune intégration —
+                            <TextLink
+                                :href="integrationsIndex().url"
+                                class="text-xs"
+                            >
+                                créez-en une dans les réglages</TextLink
+                            >
+                        </p>
+                    </template>
 
                     <Textarea
                         v-else-if="field.type === 'textarea'"
@@ -264,6 +346,13 @@ const outputJson = computed(() =>
                         "
                     />
                 </div>
+
+                <!-- Section webhook dédiée (D18) : URL publique, régénération, hint idempotence -->
+                <WebhookInspectorSection
+                    v-if="isWebhookNode"
+                    :workflow-id="workflowId"
+                    :can-update-workflow="canUpdateWorkflow ?? false"
+                />
 
                 <template v-if="canUpdateWorkflow">
                     <Separator />

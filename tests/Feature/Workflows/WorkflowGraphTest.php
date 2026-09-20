@@ -9,7 +9,7 @@ test('saving the graph persists nodes and edges', function () {
 
     $payload = graphPayload(
         nodes: [
-            ['key' => 'n1', 'type' => 'trigger.webhook', 'config' => ['method' => 'POST', 'path' => 'hooks/leads'], 'positionX' => 60, 'positionY' => 200],
+            ['key' => 'n1', 'type' => 'trigger.webhook', 'positionX' => 60, 'positionY' => 200],
             ['key' => 'n2', 'type' => 'ai.classification', 'config' => ['model' => 'claude-haiku'], 'positionX' => 330, 'positionY' => 150],
             ['key' => 'n3', 'type' => 'action.email', 'positionX' => 600, 'positionY' => 100],
         ],
@@ -31,7 +31,7 @@ test('saving the graph persists nodes and edges', function () {
     $webhook = $workflow->nodes()->where('key', 'n1')->firstOrFail();
 
     expect($webhook->name)->toBe('trigger.webhook')
-        ->and($webhook->config)->toBe(['method' => 'POST', 'path' => 'hooks/leads'])
+        ->and($webhook->config)->toBe([])
         ->and($webhook->position_x)->toBe(60)
         ->and($webhook->position_y)->toBe(200)
         ->and($workflow->edges()->where('source_node_key', 'n1')->firstOrFail()->source_handle)->toBe('out')

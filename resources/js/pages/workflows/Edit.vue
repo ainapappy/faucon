@@ -30,6 +30,7 @@ import {
 import workflows, { index as workflowsIndex } from '@/routes/workflows';
 import type {
     ExecutionResult,
+    IntegrationSummary,
     NodeRunResult,
     NodeTypeCatalog,
     WorkflowDetail,
@@ -47,6 +48,8 @@ type Props = {
         canUpdateWorkflow: boolean;
         canDeleteWorkflow: boolean;
     };
+    /** Intégrations de l'équipe — options des champs `integration` de l'inspecteur (D16). */
+    integrations: IntegrationSummary[];
 };
 
 const props = defineProps<Props>();
@@ -519,6 +522,8 @@ onBeforeUnmount(() => {
                 :status="workflowStatus"
                 :can-update-workflow="permissions.canUpdateWorkflow"
                 :node-result="selectedNodeResult"
+                :integrations="integrations"
+                :workflow-id="workflow.id"
                 @update-node-name="
                     (key, name) => builder.setNodeName(key, name)
                 "

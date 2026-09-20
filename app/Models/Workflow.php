@@ -31,6 +31,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, WorkflowNode> $nodes
  * @property-read Collection<int, WorkflowEdge> $edges
  * @property-read WorkflowNode|null $triggerNode
+ * @property-read WebhookEndpoint|null $webhookEndpoint
  */
 #[Fillable(['name', 'description', 'status'])]
 class Workflow extends Model
@@ -99,5 +100,15 @@ class Workflow extends Model
     {
         return $this->hasOne(WorkflowNode::class)
             ->whereIn('type', NodeCatalog::typesForCategory(NodeCategory::Trigger));
+    }
+
+    /**
+     * Get the public webhook endpoint of the workflow, if any.
+     *
+     * @return HasOne<WebhookEndpoint, $this>
+     */
+    public function webhookEndpoint(): HasOne
+    {
+        return $this->hasOne(WebhookEndpoint::class);
     }
 }

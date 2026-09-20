@@ -15,6 +15,9 @@ readonly class TeamPermissions
         public bool $canCreateWorkflow,
         public bool $canUpdateWorkflow,
         public bool $canDeleteWorkflow,
+        public bool $canCreateIntegration,
+        public bool $canUpdateIntegration,
+        public bool $canDeleteIntegration,
     ) {
         //
     }

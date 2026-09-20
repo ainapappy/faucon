@@ -41,10 +41,7 @@ final class NodeCatalog
                 outputs: [
                     ['id' => 'out', 'label' => null, 'position' => 0.5],
                 ],
-                fields: [
-                    ['key' => 'method', 'label' => 'Méthode', 'type' => 'select', 'required' => false, 'placeholder' => null, 'options' => ['POST', 'GET'], 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
-                    ['key' => 'path', 'label' => 'Chemin', 'type' => 'text', 'required' => false, 'placeholder' => 'hooks/leads', 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
-                ],
+                fields: [],
             ),
             'trigger.schedule' => new NodeDefinition(
                 type: 'trigger.schedule',
@@ -98,21 +95,6 @@ final class NodeCatalog
                 ],
                 fields: [
                     ['key' => 'expression', 'label' => 'Expression', 'type' => 'textarea', 'required' => false, 'placeholder' => '{{ trigger.email }}', 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => true],
-                ],
-            ),
-            'data.http_request' => new NodeDefinition(
-                type: 'data.http_request',
-                category: NodeCategory::Data,
-                label: 'Requête HTTP',
-                description: 'Appel sortant protégé (garde-fous SSRF)',
-                icon: 'globe',
-                input: true,
-                outputs: [
-                    ['id' => 'out', 'label' => null, 'position' => 0.5],
-                ],
-                fields: [
-                    ['key' => 'method', 'label' => 'Méthode', 'type' => 'select', 'required' => false, 'placeholder' => null, 'options' => ['GET', 'POST', 'PUT'], 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
-                    ['key' => 'url', 'label' => 'URL', 'type' => 'text', 'required' => false, 'placeholder' => 'https://api.exemple.com/v1/…', 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => true],
                 ],
             ),
             'logic.condition' => new NodeDefinition(
@@ -203,6 +185,25 @@ final class NodeCatalog
                     ['key' => 'prompt', 'label' => 'Consigne', 'type' => 'textarea', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
                 ],
             ),
+            'action.http' => new NodeDefinition(
+                type: 'action.http',
+                category: NodeCategory::Action,
+                label: 'Requête HTTP',
+                description: 'Appel sortant protégé (garde-fous SSRF)',
+                icon: 'globe',
+                input: true,
+                outputs: [
+                    ['id' => 'out', 'label' => null, 'position' => 0.5],
+                ],
+                fields: [
+                    ['key' => 'method', 'label' => 'Méthode', 'type' => 'select', 'required' => false, 'placeholder' => null, 'options' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
+                    ['key' => 'url', 'label' => 'URL', 'type' => 'text', 'required' => false, 'placeholder' => 'https://api.exemple.com/v1/…', 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => true],
+                    ['key' => 'headers', 'label' => 'En-têtes (Clé: valeur, une par ligne)', 'type' => 'textarea', 'required' => false, 'placeholder' => 'Content-Type: application/json', 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => true],
+                    ['key' => 'body', 'label' => 'Corps', 'type' => 'textarea', 'required' => false, 'placeholder' => '{"name": "{{ trigger.name }}"}', 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => true],
+                    ['key' => 'integration_id', 'label' => 'Intégration', 'type' => 'integration', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
+                    ['key' => 'failure_policy', 'label' => 'Politique d’échec', 'type' => 'select', 'required' => false, 'placeholder' => null, 'options' => ['fail', 'continue'], 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
+                ],
+            ),
             'action.email' => new NodeDefinition(
                 type: 'action.email',
                 category: NodeCategory::Action,
@@ -215,6 +216,7 @@ final class NodeCatalog
                     ['key' => 'to', 'label' => 'Destinataire', 'type' => 'text', 'required' => false, 'placeholder' => '{{ trigger.email }}', 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => true],
                     ['key' => 'subject', 'label' => 'Sujet', 'type' => 'text', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
                     ['key' => 'body', 'label' => 'Corps', 'type' => 'textarea', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
+                    ['key' => 'integration_id', 'label' => 'Intégration SMTP (optionnelle)', 'type' => 'integration', 'required' => false, 'placeholder' => null, 'options' => null, 'min' => null, 'max' => null, 'step' => null, 'mono' => false],
                 ],
             ),
             'action.message' => new NodeDefinition(

@@ -13,8 +13,17 @@ export type WorkflowStatus = 'draft' | 'active';
 /** Les cinq catégories de nodes (ordre fixe validé CVD, voir `lib/nodeCategories.ts`). */
 export type NodeCategory = 'trigger' | 'data' | 'logic' | 'ai' | 'action';
 
-/** Types de champs de configuration rendus par l'inspecteur. */
-export type NodeFieldType = 'text' | 'textarea' | 'select' | 'range';
+/**
+ * Types de champs de configuration rendus par l'inspecteur.
+ * `integration` : select alimenté par la prop `integrations` de la page
+ * (référence par id, jamais de valeur — D16).
+ */
+export type NodeFieldType =
+    | 'text'
+    | 'textarea'
+    | 'select'
+    | 'range'
+    | 'integration';
 
 /** Valeurs de configuration acceptées par le backend (scalaires uniquement). */
 export type NodeConfigValue = string | number | boolean;

@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Workflows;
 
+use App\Models\Integration;
+use App\Models\Team;
 use App\Services\Workflow\GraphValidator;
 use App\Services\Workflow\NodeCatalog;
 use Closure;
@@ -33,7 +35,10 @@ class SaveWorkflowGraphRequest extends FormRequest
                         return;
                     }
 
-                    if (! is_scalar($value)) {
+                    // Null is allowed: ConvertEmptyStringsToNull turns the
+                    // empty-string defaults of the builder into null, which
+                    // the handlers treat exactly like an absent field.
+                    if (! is_scalar($value) && $value !== null) {
                         $fail(__('The :attribute must be a scalar value.'));
                     }
                 },
@@ -74,8 +79,65 @@ class SaveWorkflowGraphRequest extends FormRequest
                 $this->validateUniqueTriplets($validator, $edges);
                 $this->validateConfigWhitelist($validator, $nodes, $nodesByKey);
                 $this->validateNoCycle($validator, $edges);
+                $this->validateIntegrationReferences($validator, $nodes);
             },
         ];
+    }
+
+    /**
+     * Every non-empty `integration_id` must reference an integration of
+     * the current team — dangling ids stay accepted so the autosave is
+     * never blocked after a deletion (D15). One single whereIn query.
+     *
+     * @param  array<int, array<string, mixed>>  $nodes
+     */
+    private function validateIntegrationReferences(Validator $validator, array $nodes): void
+    {
+        $referenced = [];
+
+        foreach ($nodes as $index => $node) {
+            foreach ((array) ($node['config'] ?? []) as $field => $value) {
+                if ($field === 'integration_id' && is_string($value) && $value !== '') {
+                    $referenced[$value][] = (int) $index;
+                }
+            }
+        }
+
+        if ($referenced === []) {
+            return;
+        }
+
+        $team = $this->route('current_team');
+
+        if (! $team instanceof Team) {
+            return;
+        }
+
+        $owned = Integration::query()
+            ->whereIn('id', array_keys($referenced))
+            ->where('team_id', $team->id)
+            ->pluck('id')
+            ->all();
+
+        foreach ($referenced as $id => $indexes) {
+            // PHP casts numeric array keys to int: the id is compared as int.
+            $id = (int) $id;
+
+            if (in_array($id, $owned, true)) {
+                continue;
+            }
+
+            if (! Integration::query()->whereKey($id)->exists()) {
+                continue;
+            }
+
+            foreach ($indexes as $index) {
+                $validator->errors()->add(
+                    "nodes.{$index}.config.integration_id",
+                    __('L’intégration référencée n’appartient pas à cette équipe.'),
+                );
+            }
+        }
     }
 
     /**

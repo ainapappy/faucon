@@ -13,6 +13,7 @@ use App\Models\Workflow;
 use App\Models\WorkflowEdge;
 use App\Models\WorkflowNode;
 use App\Services\Workflow\NodeCatalog;
+use App\Support\IntegrationSummaries;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -97,6 +98,7 @@ class WorkflowController extends Controller
                     'sourceHandle' => $edge->source_handle,
                 ])->all(),
             ],
+            'integrations' => IntegrationSummaries::forTeam($currentTeam),
             'nodeTypes' => $this->nodeTypes(),
             'permissions' => $request->user()->toTeamPermissions($currentTeam),
         ]);

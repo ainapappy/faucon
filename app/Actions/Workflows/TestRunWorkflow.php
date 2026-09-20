@@ -11,6 +11,9 @@ use App\Services\Workflow\WorkflowRunner;
 /**
  * Load the persisted graph, map it to the engine shapes and run it.
  *
+ * Reused as-is by the public webhook endpoint (WebhookController) and
+ * by the builder test-run: two triggers of the same engine (D19).
+ *
  * The mapping is inline with PHPDoc shapes: a shared GraphSnapshot DTO would
  * wait for phase 7 (execution snapshot) to justify itself (YAGNI).
  */

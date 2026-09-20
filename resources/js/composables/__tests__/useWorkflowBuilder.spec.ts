@@ -102,9 +102,9 @@ const catalog: NodeTypeCatalog = {
             },
         ],
     },
-    'data.http_request': {
-        type: 'data.http_request',
-        category: 'data',
+    'action.http': {
+        type: 'action.http',
+        category: 'action',
         label: 'Requête HTTP',
         description: 'Appel sortant protégé (garde-fous SSRF)',
         icon: 'globe',
@@ -117,7 +117,7 @@ const catalog: NodeTypeCatalog = {
                 type: 'select',
                 required: false,
                 placeholder: null,
-                options: ['GET', 'POST', 'PUT'],
+                options: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
                 min: null,
                 max: null,
                 step: null,
@@ -128,6 +128,30 @@ const catalog: NodeTypeCatalog = {
                 label: 'URL',
                 type: 'text',
                 required: false,
+                placeholder: 'https://api.exemple.com/v1/…',
+                options: null,
+                min: null,
+                max: null,
+                step: null,
+                mono: true,
+            },
+            {
+                key: 'headers',
+                label: 'En-têtes',
+                type: 'textarea',
+                required: false,
+                placeholder: 'Content-Type: application/json',
+                options: null,
+                min: null,
+                max: null,
+                step: null,
+                mono: true,
+            },
+            {
+                key: 'body',
+                label: 'Corps',
+                type: 'textarea',
+                required: false,
                 placeholder: null,
                 options: null,
                 min: null,
@@ -135,7 +159,41 @@ const catalog: NodeTypeCatalog = {
                 step: null,
                 mono: true,
             },
+            {
+                key: 'integration_id',
+                label: 'Intégration',
+                type: 'integration',
+                required: false,
+                placeholder: null,
+                options: null,
+                min: null,
+                max: null,
+                step: null,
+                mono: false,
+            },
+            {
+                key: 'failure_policy',
+                label: 'Politique d’échec',
+                type: 'select',
+                required: false,
+                placeholder: null,
+                options: ['fail', 'continue'],
+                min: null,
+                max: null,
+                step: null,
+                mono: false,
+            },
         ],
+    },
+    'trigger.webhook': {
+        type: 'trigger.webhook',
+        category: 'trigger',
+        label: 'Webhook',
+        description: 'Appel HTTP entrant, idempotent et rate-limité',
+        icon: 'webhook',
+        input: false,
+        outputs: [{ id: 'out', label: null, position: 0.5 }],
+        fields: [],
     },
 };
 
@@ -179,8 +237,20 @@ describe('newNodeKey', () => {
 
 describe('defaultConfigValue', () => {
     it('initialise un select sur sa première option', () => {
-        const field = catalog['data.http_request'].fields[0];
+        const field = catalog['action.http'].fields[0];
         expect(defaultConfigValue(field)).toBe('GET');
+    });
+
+    it('initialise failure_policy sur fail (première option)', () => {
+        const field = catalog['action.http'].fields[5];
+        expect(field.key).toBe('failure_policy');
+        expect(defaultConfigValue(field)).toBe('fail');
+    });
+
+    it('initialise un champ integration à une chaîne vide (référence choisie, pas d’option)', () => {
+        const field = catalog['action.http'].fields[4];
+        expect(field.type).toBe('integration');
+        expect(defaultConfigValue(field)).toBe('');
     });
 
     it('initialise un range au milieu du segment', () => {
@@ -235,6 +305,30 @@ describe('useWorkflowBuilder', () => {
 
         // Un type inconnu du catalogue est refusé silencieusement.
         expect(builder.addNode('ghost.unknown', { x: 0, y: 0 })).toBeNull();
+    });
+
+    it('ajoute un node webhook sans aucun champ de configuration (section dédiée à l’inspecteur)', () => {
+        const builder = useWorkflowBuilder(catalog, buildGraph());
+
+        const node = builder.addNode('trigger.webhook', { x: 200, y: 200 });
+        expect(node).not.toBeNull();
+        expect(node?.name).toBe('Webhook');
+        expect(node?.config).toEqual({});
+    });
+
+    it('ajoute un node action.http avec les six champs du catalogue initialisés', () => {
+        const builder = useWorkflowBuilder(catalog, buildGraph());
+
+        const node = builder.addNode('action.http', { x: 200, y: 200 });
+        expect(node).not.toBeNull();
+        expect(node?.config).toEqual({
+            method: 'GET',
+            url: '',
+            headers: '',
+            body: '',
+            integration_id: '',
+            failure_policy: 'fail',
+        });
     });
 
     it('refuse les connexions en boucle sur soi-même et les doublons', () => {

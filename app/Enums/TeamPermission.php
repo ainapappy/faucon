@@ -17,4 +17,8 @@ enum TeamPermission: string
     case WorkflowCreate = 'workflow:create';
     case WorkflowUpdate = 'workflow:update';
     case WorkflowDelete = 'workflow:delete';
+
+    case IntegrationCreate = 'integration:create';
+    case IntegrationUpdate = 'integration:update';
+    case IntegrationDelete = 'integration:delete';
 }

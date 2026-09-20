@@ -178,6 +178,9 @@ trait HasTeams
             canCreateWorkflow: $role?->hasPermission(TeamPermission::WorkflowCreate) ?? false,
             canUpdateWorkflow: $role?->hasPermission(TeamPermission::WorkflowUpdate) ?? false,
             canDeleteWorkflow: $role?->hasPermission(TeamPermission::WorkflowDelete) ?? false,
+            canCreateIntegration: $role?->hasPermission(TeamPermission::IntegrationCreate) ?? false,
+            canUpdateIntegration: $role?->hasPermission(TeamPermission::IntegrationUpdate) ?? false,
+            canDeleteIntegration: $role?->hasPermission(TeamPermission::IntegrationDelete) ?? false,
         );
     }
 

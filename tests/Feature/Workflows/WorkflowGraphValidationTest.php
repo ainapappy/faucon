@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Integration;
 use App\Models\Workflow;
 use App\Models\WorkflowNode;
 
@@ -236,4 +237,78 @@ test('an output node is accepted and an edge starting from it is refused', funct
 
     $response->assertUnprocessable()
         ->assertJsonValidationErrors(['edges.0.sourceHandle']);
+});
+
+test('an integration id of another team is rejected', function () {
+    [$user, $team] = teamWithMember();
+    $workflow = Workflow::factory()->for($team)->create();
+    $foreign = Integration::factory()->create();
+
+    $payload = graphPayload(
+        nodes: [
+            ['key' => 'n1', 'type' => 'trigger.manual'],
+            ['key' => 'n2', 'type' => 'action.http', 'config' => ['integration_id' => (string) $foreign->id]],
+        ],
+        edges: [['source' => 'n1', 'target' => 'n2']],
+    );
+
+    $response = $this->actingAs($user)
+        ->putJson(route('workflows.graph.update', ['current_team' => $team->slug, 'workflow' => $workflow->id]), $payload);
+
+    $response->assertUnprocessable();
+
+    expect($response->json('errors')['nodes.1.config.integration_id'][0])
+        ->toBe('L’intégration référencée n’appartient pas à cette équipe.');
+});
+
+test('an integration id of the current team is accepted', function () {
+    [$user, $team] = teamWithMember();
+    $workflow = Workflow::factory()->for($team)->create();
+    $owned = Integration::factory()->for($team)->create();
+
+    $payload = graphPayload(
+        nodes: [
+            ['key' => 'n1', 'type' => 'trigger.manual'],
+            ['key' => 'n2', 'type' => 'action.http', 'config' => ['integration_id' => (string) $owned->id]],
+        ],
+        edges: [['source' => 'n1', 'target' => 'n2']],
+    );
+
+    $this->actingAs($user)
+        ->putJson(route('workflows.graph.update', ['current_team' => $team->slug, 'workflow' => $workflow->id]), $payload)
+        ->assertNoContent();
+});
+
+test('a dangling integration id is accepted so the autosave never blocks', function () {
+    [$user, $team] = teamWithMember();
+    $workflow = Workflow::factory()->for($team)->create();
+
+    $payload = graphPayload(
+        nodes: [
+            ['key' => 'n1', 'type' => 'trigger.manual'],
+            ['key' => 'n2', 'type' => 'action.http', 'config' => ['integration_id' => '99999']],
+        ],
+        edges: [['source' => 'n1', 'target' => 'n2']],
+    );
+
+    $this->actingAs($user)
+        ->putJson(route('workflows.graph.update', ['current_team' => $team->slug, 'workflow' => $workflow->id]), $payload)
+        ->assertNoContent();
+});
+
+test('an empty integration id string is treated as absent', function () {
+    [$user, $team] = teamWithMember();
+    $workflow = Workflow::factory()->for($team)->create();
+
+    $payload = graphPayload(
+        nodes: [
+            ['key' => 'n1', 'type' => 'trigger.manual'],
+            ['key' => 'n2', 'type' => 'action.http', 'config' => ['integration_id' => '']],
+        ],
+        edges: [['source' => 'n1', 'target' => 'n2']],
+    );
+
+    $this->actingAs($user)
+        ->putJson(route('workflows.graph.update', ['current_team' => $team->slug, 'workflow' => $workflow->id]), $payload)
+        ->assertNoContent();
 });

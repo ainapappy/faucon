@@ -13,10 +13,36 @@ test('node type ids match the category dot type format', function () {
     }
 });
 
-test('the catalog distributes 3/4/2/3/3 types across the five categories', function () {
+test('the catalog distributes 3/3/2/3/4 types across the five categories', function () {
     $counts = array_map(fn (NodeCategory $category): int => count(NodeCatalog::typesForCategory($category)), NodeCategory::cases());
 
-    expect($counts)->toBe([3, 4, 2, 3, 3]);
+    expect($counts)->toBe([3, 3, 2, 3, 4]);
+});
+
+test('the data.http_request type is gone from the catalog', function () {
+    expect(NodeCatalog::has('data.http_request'))->toBeFalse()
+        ->and(NodeCatalog::definitionFor('data.http_request'))->toBeNull();
+});
+
+test('the action.http definition carries the six hardened fields', function () {
+    $definition = NodeCatalog::definitionFor('action.http');
+
+    expect($definition)->not->toBeNull()
+        ->and($definition->type)->toBe('action.http')
+        ->and($definition->category)->toBe(NodeCategory::Action)
+        ->and($definition->label)->toBe('Requête HTTP')
+        ->and($definition->description)->toBe('Appel sortant protégé (garde-fous SSRF)')
+        ->and($definition->icon)->toBe('globe')
+        ->and($definition->input)->toBeTrue()
+        ->and(array_column($definition->outputs, 'id'))->toBe(['out'])
+        ->and(array_column($definition->fields, 'key'))->toBe(['method', 'url', 'headers', 'body', 'integration_id', 'failure_policy'])
+        ->and($definition->fields[0]['options'])->toBe(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
+        ->and($definition->fields[1]['type'])->toBe('text')
+        ->and($definition->fields[1]['mono'])->toBeTrue()
+        ->and($definition->fields[2]['type'])->toBe('textarea')
+        ->and($definition->fields[2]['mono'])->toBeTrue()
+        ->and($definition->fields[4]['type'])->toBe('integration')
+        ->and($definition->fields[5]['options'])->toBe(['fail', 'continue']);
 });
 
 test('the manual trigger has one output and no configuration fields', function () {
@@ -90,11 +116,17 @@ test('the trigger types are resolvable for the trigger node relation', function 
     ]);
 });
 
-test('the webhook definition keeps its select and text fields', function () {
+test('the webhook trigger declares no configuration fields', function () {
     $definition = NodeCatalog::definitionFor('trigger.webhook');
 
     expect($definition)->not->toBeNull()
-        ->and(array_column($definition->fields, 'key'))->toBe(['method', 'path'])
-        ->and($definition->fields[0]['options'])->toBe(['POST', 'GET'])
-        ->and($definition->fields[1]['placeholder'])->toBe('hooks/leads');
+        ->and($definition->fields)->toBe([]);
+});
+
+test('the email action carries the integration field', function () {
+    $definition = NodeCatalog::definitionFor('action.email');
+
+    expect($definition)->not->toBeNull()
+        ->and(array_column($definition->fields, 'key'))->toBe(['to', 'subject', 'body', 'integration_id'])
+        ->and($definition->fields[3]['type'])->toBe('integration');
 });

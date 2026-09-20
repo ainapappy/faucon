@@ -26,6 +26,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, Membership> $memberships
  * @property-read Collection<int, User> $members
  * @property-read Collection<int, Workflow> $workflows
+ * @property-read Collection<int, Integration> $integrations
  */
 #[Fillable(['name', 'slug', 'is_personal'])]
 class Team extends Model
@@ -104,6 +105,16 @@ class Team extends Model
     public function workflows(): HasMany
     {
         return $this->hasMany(Workflow::class);
+    }
+
+    /**
+     * Get all integrations of this team.
+     *
+     * @return HasMany<Integration, $this>
+     */
+    public function integrations(): HasMany
+    {
+        return $this->hasMany(Integration::class);
     }
 
     /**

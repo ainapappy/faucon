@@ -72,9 +72,7 @@ const saveLabel = computed(() => {
         </Button>
 
         <div class="flex min-w-0 items-center gap-2">
-            <Workflow
-                class="text-muted-foreground h-3.75 w-3.75 flex-none"
-            />
+            <Workflow class="text-muted-foreground h-3.75 w-3.75 flex-none" />
             <Input
                 v-model="name"
                 class="hover:bg-muted focus-visible:bg-background h-auto w-57.5 border-transparent px-2 py-1 text-[14.5px] font-semibold shadow-none hover:shadow-none focus-visible:shadow-none"

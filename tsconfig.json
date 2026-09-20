@@ -127,6 +127,7 @@
     "exclude": [
         "resources/js/vitest.config.ts",
         "resources/js/composables/__tests__",
+        "resources/js/lib/__tests__",
         "resources/js/routes/__tests__"
     ]
 }
