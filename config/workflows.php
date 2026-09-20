@@ -12,7 +12,7 @@ return [
         // Maximum time (seconds) to wait for a complete response.
         'timeout' => (int) env('WORKFLOW_HTTP_TIMEOUT', 10),
 
-        // Maximum time (seconds) to wait while establishing the connection.
+        // Maximum time (seconds) to while establishing the connection.
         'connect_timeout' => (int) env('WORKFLOW_HTTP_CONNECT_TIMEOUT', 5),
 
         // Maximum number of manual redirects (each hop re-validated by the
@@ -47,15 +47,39 @@ return [
         // comfortably exceed the longest possible attempt.
         'cancel_ttl' => (int) env('WORKFLOW_EXECUTION_CANCEL_TTL', 3600),
 
-        // Node error reasons considered transient — a failed run whose
-        // errors ALL carry one of these reasons is released for a retry.
-        // Everything else (validation, SSRF, config, content…) is final.
         'retryable_reasons' => [
             'network_error',
             'provider_timeout',
             'provider_unreachable',
             'provider_rate_limited',
         ],
+
+        // Retention (days) of FINAL executions for model:prune (phase 8).
+        'retention_days' => (int) env('WORKFLOW_EXECUTIONS_RETENTION_DAYS', 90),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Execution logs (phase 8 — journal, redaction, retention)
+    |--------------------------------------------------------------------------
+    */
+
+    'logs' => [
+        // Retention (days) of log rows for model:prune.
+        'retention_days' => (int) env('WORKFLOW_LOGS_RETENTION_DAYS', 30),
+
+        // Strings longer than this are truncated with an ellipsis.
+        'max_string_chars' => (int) env('WORKFLOW_LOGS_MAX_STRING_CHARS', 2000),
+
+        // A JSON column larger than this becomes an omission marker.
+        'max_json_bytes' => (int) env('WORKFLOW_LOGS_MAX_JSON_BYTES', 65536),
+
+        'redacted_keys' => [
+            'token', 'api_key', 'apikey', 'api_token', 'access_token', 'refresh_token',
+            'id_token', 'secret', 'api_secret', 'client_secret', 'secret_key',
+            'private_key', 'password', 'passwd', 'authorization', 'auth', 'credentials',
+        ],
+        'redacted_key_suffixes' => ['_token', '_secret', '_password', '_api_key', '_apikey', '_credential'],
     ],
 
     /*

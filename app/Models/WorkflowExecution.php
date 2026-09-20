@@ -6,9 +6,13 @@ use App\Enums\ExecutionStatus;
 use App\Enums\ExecutionTrigger;
 use Database\Factories\WorkflowExecutionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -36,6 +40,7 @@ use Illuminate\Support\Carbon;
  * @property-read Workflow $workflow
  * @property-read Team $team
  * @property-read User|null $user
+ * @property-read Collection<int, WorkflowExecutionLog> $logs
  */
 #[Fillable([
     'workflow_id', 'team_id', 'user_id', 'triggered_by', 'status', 'input',
@@ -45,6 +50,8 @@ class WorkflowExecution extends Model
 {
     /** @use HasFactory<WorkflowExecutionFactory> */
     use HasFactory;
+
+    use MassPrunable;
 
     /**
      * Get the attributes that should be cast.
@@ -95,6 +102,17 @@ class WorkflowExecution extends Model
     }
 
     /**
+     * Get the journal rows of the execution, in chronological (insertion)
+     * order — the order of execution.
+     *
+     * @return HasMany<WorkflowExecutionLog, $this>
+     */
+    public function logs(): HasMany
+    {
+        return $this->hasMany(WorkflowExecutionLog::class)->orderBy('id');
+    }
+
+    /**
      * Whether the execution reached a terminal state.
      */
     public function isFinal(): bool
@@ -104,5 +122,23 @@ class WorkflowExecution extends Model
             ExecutionStatus::Failed,
             ExecutionStatus::Cancelled,
         ], true);
+    }
+
+    /**
+     * Get the prunable query: final states only, older than the configured
+     * retention — a pending or running execution is never pruned. The
+     * cascade on `workflow_execution_logs` removes the remaining rows.
+     *
+     * @return Builder<static>
+     */
+    public function prunable(): Builder
+    {
+        return static::query()
+            ->whereIn('status', [
+                ExecutionStatus::Completed->value,
+                ExecutionStatus::Failed->value,
+                ExecutionStatus::Cancelled->value,
+            ])
+            ->where('created_at', '<=', now()->subDays((int) config('workflows.execution.retention_days', 90)));
     }
 }

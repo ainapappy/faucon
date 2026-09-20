@@ -9,6 +9,7 @@ use App\Models\WorkflowEdge;
 use App\Models\WorkflowExecution;
 use App\Models\WorkflowNode;
 use App\Services\Workflow\ExecutionCancel;
+use App\Services\Workflow\Log\ExecutionLogWriter;
 use App\Services\Workflow\WorkflowGraphMapper;
 use App\Services\Workflow\WorkflowRunner;
 
@@ -69,6 +70,7 @@ test('the full loop: the endpoint flag turns the queued run into cancelled', fun
     (new RunWorkflowJob($execution->id))->handle(
         app(WorkflowRunner::class),
         app(WorkflowGraphMapper::class),
+        app(ExecutionLogWriter::class),
     );
 
     $execution->refresh();

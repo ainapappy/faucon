@@ -168,6 +168,11 @@ export type NodeRunResult = {
     durationMs: number;
     /** Sortie réelle du node ; vide si skipped. */
     output: Record<string, unknown>;
+    /**
+     * Input agrégé reçu par le node (phase 8, additif — présent dans la
+     * réponse du tiroir test-run, absent des réponses antérieures).
+     */
+    input?: Record<string, unknown>;
     error: ExecutionErrorData | null;
 };
 

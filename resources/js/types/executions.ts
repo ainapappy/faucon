@@ -1,8 +1,9 @@
 /**
- * Exécutions persistées (phase 7) — miroir des props servies par
- * `WorkflowExecutionController` et des colonnes de `workflow_executions`.
+ * Exécutions persistées (phases 7-8) — miroir des props servies par
+ * `WorkflowExecutionController`, des colonnes de `workflow_executions` et de
+ * la projection des rows de `workflow_execution_logs`.
  */
-import type { ExecutionErrorData, ExecutionResult } from '@/types';
+import type { ExecutionErrorData } from '@/types';
 
 /** Statut persisté d'une exécution (enum PHP `ExecutionStatus`). */
 export type WorkflowExecutionStatus =
@@ -28,14 +29,62 @@ export type WorkflowExecutionListItem = {
     workflow: { id: number; name: string };
 };
 
+/** Nature d'une row de journal (enum PHP `ExecutionLogKind`). */
+export type WorkflowExecutionLogKind = 'node' | 'event';
+
+/** Niveau d'une row de journal (enum PHP `ExecutionLogLevel`). */
+export type WorkflowExecutionLogLevel = 'info' | 'ok' | 'error';
+
+/**
+ * Statut d'un node dans le journal — `queued` = row pré-insérée à l'ouverture
+ * de la tentative (pas encore exécutée), `skipped` = jamais exécuté.
+ */
+export type WorkflowExecutionNodeLogStatus =
+    | 'queued'
+    | 'ok'
+    | 'error'
+    | 'skipped';
+
+/**
+ * Une row du journal d'exécution (prop `execution.logs`, phase 8) — miroir de
+ * la projection de `WorkflowExecutionController`, ordonnée par id asc (= ordre
+ * d'écriture). `input`/`output`/`error` sont déjà redactés et tronqués côté
+ * serveur : le front les affiche tels quels, sans second masquage.
+ */
+export type WorkflowExecutionLogEntry = {
+    id: number;
+    /** Tentative concernée (1 = premier passage). */
+    attempt: number;
+    kind: WorkflowExecutionLogKind;
+    /** null pour les rows d'événement (kind `'event'`). */
+    nodeKey: string | null;
+    nodeType: string | null;
+    nodeName: string | null;
+    /** null pour les rows d'événement. */
+    status: WorkflowExecutionNodeLogStatus | null;
+    /** null pour queued / skipped / event. */
+    durationMs: number | null;
+    /** Ligne de journal FR ; null pour queued / skipped. */
+    message: string | null;
+    level: WorkflowExecutionLogLevel;
+    /** Input agrégé reçu par le node (redacté + tronqué côté back). */
+    input: Record<string, unknown> | null;
+    /** Sortie du node (redactée + tronquée côté back). */
+    output: Record<string, unknown> | null;
+    error: ExecutionErrorData | null;
+    /** Millisecondes écoulées depuis le début de LA TENTATIVE. */
+    offsetMs: number;
+};
+
 /**
  * Détail d'une exécution sélectionnée (prop `execution`, sheet de détail).
- * `result` est le résultat complet du moteur — timeline des nodes incluse ;
- * `null` tant que le run n'a pas démarré.
+ * `logs` est le journal complet (rows par node + événements de cycle de vie,
+ * phase 8) — présent, éventuellement vide, dès la sélection ; `null` tant
+ * qu'aucune exécution n'est sélectionnée.
  */
 export type WorkflowExecutionDetail = WorkflowExecutionListItem & {
     input: Record<string, unknown> | null;
-    result: ExecutionResult | null;
+    logs: WorkflowExecutionLogEntry[];
     error: ExecutionErrorData | null;
     started_at: string | null;
     finished_at: string | null;

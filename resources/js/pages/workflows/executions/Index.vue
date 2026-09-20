@@ -2,6 +2,7 @@
 import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import {
+    Check,
     ChevronLeft,
     ChevronRight,
     CircleSlash,
@@ -31,6 +32,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { Spinner } from '@/components/ui/spinner';
 import {
     Table,
     TableBody,
@@ -45,6 +47,11 @@ import {
     formatExecutionDate,
     formatTrigger,
 } from '@/lib/executionFormat';
+import {
+    buildJournal,
+    buildTimeline,
+    durationBarWidth,
+} from '@/lib/executionLogs';
 import runWorkflow from '@/actions/App/Http/Controllers/Workflows/RunWorkflowController';
 import cancelExecution from '@/actions/App/Http/Controllers/Workflows/WorkflowExecution/CancelWorkflowExecutionController';
 import { index as executionsIndex } from '@/routes/workflow-executions';
@@ -53,6 +60,8 @@ import type {
     PaginatedExecutions,
     WorkflowExecutionDetail,
     WorkflowExecutionListItem,
+    WorkflowExecutionLogLevel,
+    WorkflowExecutionNodeLogStatus,
     WorkflowExecutionStatus,
     WorkflowOption,
 } from '@/types';
@@ -62,6 +71,7 @@ const props = defineProps<{
     execution: WorkflowExecutionDetail | null;
     workflows: WorkflowOption[];
     filters: ExecutionFilters;
+    logs_retention_days: number;
 }>();
 
 const page = usePage();
@@ -183,13 +193,23 @@ function close(): void {
     router.get(buildIndexUrl({}), {}, { preserveScroll: true });
 }
 
-/* Timeline des nodes (maquette : « Parcours par node »). */
+/*
+ * Timeline et journal (phase 8) : dérivés de la prop `execution.logs` par
+ * `lib/executionLogs` — rows de node de la tentative courante pour la
+ * timeline, toutes les rows messageées pour le journal.
+ */
 const openStep = ref<number | null>(null);
 
-const timeline = computed(() => selected.value?.result?.nodes ?? []);
+const timeline = computed(() =>
+    selected.value ? buildTimeline(selected.value) : [],
+);
+
+const journal = computed(() =>
+    selected.value ? buildJournal(selected.value) : [],
+);
 
 const maxStepMs = computed(() =>
-    Math.max(1, ...timeline.value.map((node) => node.durationMs || 0)),
+    Math.max(1, ...timeline.value.map((node) => node.durationMs ?? 0)),
 );
 
 const cancelRequested = ref(false);
@@ -266,20 +286,36 @@ function retry(): void {
     );
 }
 
-function stepDotClass(nodeStatus: 'ok' | 'error' | 'skipped'): string {
+/*
+ * Présentation des statuts de node du journal (règle CVD : la couleur ne
+ * porte jamais l'information seule — icône/libellé systématiques). Dots en
+ * teinte soft miroir de la maquette (step-dot.success/error/running).
+ */
+function stepDotClass(nodeStatus: WorkflowExecutionNodeLogStatus): string {
     return {
-        ok: 'bg-success',
-        error: 'bg-danger',
-        skipped: 'bg-muted-foreground/40',
+        queued: 'bg-info-soft text-info',
+        ok: 'bg-success-soft text-success',
+        error: 'bg-danger-soft text-danger',
+        skipped: 'bg-muted text-muted-foreground',
     }[nodeStatus];
 }
 
-function stepBarClass(nodeStatus: 'ok' | 'error' | 'skipped'): string {
+function stepBarClass(nodeStatus: WorkflowExecutionNodeLogStatus): string {
     return {
+        queued: 'bg-info/70',
         ok: 'bg-success/70',
         error: 'bg-danger/70',
         skipped: 'bg-muted-foreground/30',
     }[nodeStatus];
+}
+
+/* Teinte d'une ligne de journal par niveau (miroir json-str/json-num). */
+function journalLineClass(level: WorkflowExecutionLogLevel): string {
+    return {
+        info: 'text-muted-foreground',
+        ok: 'text-success',
+        error: 'text-danger',
+    }[level];
 }
 
 function formatJson(value: unknown): string {
@@ -625,9 +661,21 @@ function formatJson(value: unknown): string {
                                     class="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full"
                                     :class="stepDotClass(node.status)"
                                 >
+                                    <Spinner
+                                        v-if="node.status === 'queued'"
+                                        class="size-3"
+                                    />
+                                    <Check
+                                        v-else-if="node.status === 'ok'"
+                                        class="size-3"
+                                    />
+                                    <X
+                                        v-else-if="node.status === 'error'"
+                                        class="size-3"
+                                    />
                                     <span
-                                        v-if="node.status === 'skipped'"
-                                        class="text-[10px] text-white"
+                                        v-else
+                                        class="text-[10px] leading-none"
                                         >·</span
                                     >
                                 </span>
@@ -645,60 +693,138 @@ function formatJson(value: unknown): string {
                                         <span
                                             class="truncate text-sm font-medium"
                                         >
-                                            {{ node.name }}
+                                            {{ node.nodeName }}
                                             <Badge
                                                 variant="outline"
                                                 class="ml-2 font-mono text-[10px]"
-                                                >{{ node.type }}</Badge
+                                                >{{ node.nodeType }}</Badge
                                             >
                                         </span>
                                         <time
                                             class="text-muted-foreground shrink-0 text-xs"
                                         >
                                             {{
-                                                node.status === 'skipped'
-                                                    ? '—'
-                                                    : formatDurationMs(
-                                                          node.durationMs,
-                                                      )
+                                                formatDurationMs(
+                                                    node.durationMs,
+                                                )
                                             }}
                                         </time>
                                     </button>
+                                    <!-- Barre proportionnelle : seulement les nodes mesurés (ok/error). -->
                                     <div
-                                        v-if="node.status !== 'skipped'"
+                                        v-if="node.durationMs !== null"
                                         class="bg-muted mt-1.5 h-1 overflow-hidden rounded-full"
                                     >
                                         <i
                                             class="block h-full rounded-full"
                                             :class="stepBarClass(node.status)"
                                             :style="{
-                                                width: `${Math.max(6, (node.durationMs / maxStepMs) * 100)}%`,
+                                                width: durationBarWidth(
+                                                    node.durationMs,
+                                                    maxStepMs,
+                                                ),
                                             }"
                                         />
                                     </div>
+                                    <!-- Dépliage : entrée / sortie (payloads déjà masqués côté back) + erreur. -->
                                     <div
                                         v-if="openStep === indexStep"
                                         class="mt-2 space-y-2"
                                     >
-                                        <pre
-                                            class="bg-muted/60 overflow-x-auto rounded-lg p-2 font-mono text-xs"
-                                            >{{ formatJson(node.output) }}</pre>
-                                        <pre
-                                            v-if="node.error"
-                                            class="bg-danger-soft overflow-x-auto rounded-lg p-2 font-mono text-xs"
-                                            >{{ formatJson(node.error) }}</pre>
+                                        <div>
+                                            <p
+                                                class="text-muted-foreground mb-1 text-[10px] font-semibold tracking-wider uppercase"
+                                            >
+                                                Entrée
+                                            </p>
+                                            <pre
+                                                class="bg-muted/60 overflow-x-auto rounded-lg p-2 font-mono text-xs"
+                                                >{{
+                                                    formatJson(node.input)
+                                                }}</pre>
+                                        </div>
+                                        <div>
+                                            <p
+                                                class="text-muted-foreground mb-1 text-[10px] font-semibold tracking-wider uppercase"
+                                            >
+                                                Sortie
+                                            </p>
+                                            <pre
+                                                class="bg-muted/60 overflow-x-auto rounded-lg p-2 font-mono text-xs"
+                                                >{{
+                                                    formatJson(node.output)
+                                                }}</pre>
+                                        </div>
+                                        <div v-if="node.error">
+                                            <p
+                                                class="text-danger mb-1 text-[10px] font-semibold tracking-wider uppercase"
+                                            >
+                                                Erreur
+                                            </p>
+                                            <pre
+                                                class="bg-danger-soft overflow-x-auto rounded-lg p-2 font-mono text-xs"
+                                                >{{
+                                                    formatJson(node.error)
+                                                }}</pre>
+                                        </div>
                                     </div>
                                 </div>
                             </li>
                         </ol>
                     </div>
 
-                    <!-- Journal : fourni par la phase 8 (logs par node). -->
+                    <!-- Journal (phase 8 : rows horodatées servies par execution.logs). -->
                     <div>
                         <p class="mb-2 text-sm font-semibold">Journal</p>
-                        <p class="text-muted-foreground text-sm">
-                            Le journal détaillé par node arrivera avec la
-                            prochaine mise à jour.
+
+                        <p
+                            v-if="journal.length === 0"
+                            class="text-muted-foreground text-sm"
+                        >
+                            Aucune entrée de journal pour cette exécution.
+                        </p>
+
+                        <div
+                            v-else
+                            class="bg-muted/60 space-y-1 rounded-lg p-3 font-mono text-xs"
+                        >
+                            <template
+                                v-for="(item, index) in journal"
+                                :key="
+                                    item.kind === 'separator'
+                                        ? `separator-${item.attempt}-${index}`
+                                        : item.logId
+                                "
+                            >
+                                <div
+                                    v-if="item.kind === 'separator'"
+                                    class="flex items-center gap-2 py-1"
+                                >
+                                    <span class="bg-border h-px flex-1" />
+                                    <span
+                                        class="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase"
+                                        >Tentative {{ item.attempt }}</span
+                                    >
+                                    <span class="bg-border h-px flex-1" />
+                                </div>
+                                <div v-else class="flex gap-2.5">
+                                    <span
+                                        class="text-muted-foreground shrink-0 tabular-nums"
+                                        >{{ item.t }}</span
+                                    >
+                                    <span
+                                        class="min-w-0 wrap-break-word"
+                                        :class="journalLineClass(item.level)"
+                                        >{{ item.message }}</span
+                                    >
+                                </div>
+                            </template>
+                        </div>
+
+                        <p class="text-muted-foreground mt-3 text-xs">
+                            Rétention : {{ logs_retention_days }} jours · les
+                            secrets sont masqués automatiquement dans les
+                            entrées / sorties.
                         </p>
                     </div>
                 </div>

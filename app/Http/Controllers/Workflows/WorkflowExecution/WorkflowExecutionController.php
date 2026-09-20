@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Team;
 use App\Models\Workflow;
 use App\Models\WorkflowExecution;
+use App\Models\WorkflowExecutionLog;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -59,6 +60,7 @@ final class WorkflowExecutionController extends Controller
                 'status' => $status?->value,
                 'q' => $search,
             ],
+            'logs_retention_days' => (int) config('workflows.logs.retention_days', 30),
             'permissions' => $request->user()->toTeamPermissions($currentTeam),
         ]);
     }
@@ -100,7 +102,7 @@ final class WorkflowExecutionController extends Controller
 
         $execution = WorkflowExecution::query()
             ->where('team_id', $currentTeam->id)
-            ->with('workflow:id,name')
+            ->with(['workflow:id,name', 'logs'])
             ->find($id);
 
         if ($execution === null) {
@@ -111,11 +113,37 @@ final class WorkflowExecutionController extends Controller
 
         return array_merge($this->toListItem($execution), [
             'input' => $execution->input,
-            'result' => $execution->result,
+            'logs' => $execution->logs->map(fn (WorkflowExecutionLog $log) => $this->toLogRow($log))->all(),
             'error' => $execution->error,
             'started_at' => $execution->started_at?->toIso8601String(),
             'finished_at' => $execution->finished_at?->toIso8601String(),
         ]);
+    }
+
+    /**
+     * Project one journal row to its camelCase front shape (D8), mirroring
+     * the historical `result.nodes` keys.
+     *
+     * @return array{id: int, attempt: int, kind: string, nodeKey: string|null, nodeType: string|null, nodeName: string|null, status: string|null, durationMs: int|null, message: string|null, level: string, input: array<string, mixed>|null, output: array<string, mixed>|null, error: array<string, mixed>|null, offsetMs: int}
+     */
+    private function toLogRow(WorkflowExecutionLog $log): array
+    {
+        return [
+            'id' => $log->id,
+            'attempt' => $log->attempt,
+            'kind' => $log->kind->value,
+            'nodeKey' => $log->node_key,
+            'nodeType' => $log->node_type,
+            'nodeName' => $log->node_name,
+            'status' => $log->status,
+            'durationMs' => $log->duration_ms,
+            'message' => $log->message,
+            'level' => $log->level->value,
+            'input' => $log->input,
+            'output' => $log->output,
+            'error' => $log->error,
+            'offsetMs' => $log->offset_ms,
+        ];
     }
 
     /**

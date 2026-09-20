@@ -8,6 +8,7 @@ use App\Models\Workflow;
 use App\Models\WorkflowEdge;
 use App\Models\WorkflowExecution;
 use App\Models\WorkflowNode;
+use App\Services\Workflow\Log\ExecutionLogWriter;
 use App\Services\Workflow\WorkflowGraphMapper;
 use App\Services\Workflow\WorkflowRunner;
 use Illuminate\Support\Carbon;
@@ -106,7 +107,7 @@ test('a scheduled dispatch creates the pending execution for the right workflow'
     Carbon::setTestNow();
 });
 
-test('the queued scheduled run completes with the cron in the trigger output', function () {
+test('the queued scheduled run completes with the cron in the trigger log row', function () {
     Carbon::setTestNow('2026-09-21 09:00:00');
 
     $workflow = scheduledWorkflow();
@@ -116,14 +117,22 @@ test('the queued scheduled run completes with the cron in the trigger output', f
     (new RunWorkflowJob($execution->id))->handle(
         app(WorkflowRunner::class),
         app(WorkflowGraphMapper::class),
+        app(ExecutionLogWriter::class),
     );
 
     $execution->refresh();
 
+    $triggerRow = $execution->logs()->where('kind', 'node')->where('node_type', 'trigger.schedule')->sole();
+    $events = $execution->logs()->where('kind', 'event')->orderBy('id')->get();
+
     expect($execution->status)->toBe(ExecutionStatus::Completed)
-        ->and($execution->result['nodes'][0]['type'])->toBe('trigger.schedule')
-        ->and($execution->result['nodes'][0]['output']['cron'])->toBe('0 9 * * *')
-        ->and($execution->result['nodes'][0]['output']['triggered_at'])->toBeString();
+        ->and($triggerRow->node_key)->toBe('s')
+        ->and($triggerRow->output['cron'])->toBe('0 9 * * *')
+        ->and($triggerRow->output['triggered_at'])->toBeString()
+        // The journal announces the schedule trigger WITHOUT exposing any
+        // webhook path (A8-5); the cron itself is not a secret.
+        ->and($events->first()->message)->toBe('Exécution démarrée (déclencheur : Planifié — cron 0 9 * * *).')
+        ->and($events->last()->message)->toBe('Exécution terminée avec succès.');
 
     Carbon::setTestNow();
 });

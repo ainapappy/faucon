@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Models\Workflow;
 use App\Models\WorkflowExecution;
+use App\Models\WorkflowExecutionLog;
 use Illuminate\Testing\TestResponse;
 
 /**
@@ -97,6 +98,95 @@ test('the selected execution deep link carries the full detail', function () {
             ->has('execution.id')
             ->where('execution.id', $execution->id)
             ->where('execution.status', 'failed')
-            ->has('execution.result')
+            ->missing('execution.result')
+            ->has('execution.logs', 0)
             ->has('execution.error'));
+});
+
+test('the selected execution exposes its journal as a camelCase projection', function () {
+    [$user, $team] = teamWithMember();
+    $workflow = Workflow::factory()->for($team)->create();
+
+    $execution = WorkflowExecution::factory()->for($workflow)->create();
+
+    WorkflowExecutionLog::factory()->for($execution, 'execution')->create([
+        'message' => 'Exécution démarrée (déclencheur : Manuel).',
+        'offset_ms' => 0,
+    ]);
+    WorkflowExecutionLog::factory()->for($execution, 'execution')->okNode()->create([
+        'node_key' => 'n1',
+        'node_type' => 'trigger.manual',
+        'node_name' => 'Manuel',
+        'input' => ['email' => 'person@example.com'],
+        'output' => ['ok' => true],
+        'offset_ms' => 12,
+    ]);
+    WorkflowExecutionLog::factory()->for($execution, 'execution')->queued()->create([
+        'node_key' => 'n2',
+    ]);
+
+    openExecutions($user, $team, ['execution' => $execution->id])
+        ->assertInertia(fn ($page) => $page
+            ->has('execution.logs', 3)
+            ->where('execution.logs.0.kind', 'event')
+            ->where('execution.logs.0.message', 'Exécution démarrée (déclencheur : Manuel).')
+            ->where('execution.logs.0.offsetMs', 0)
+            ->where('execution.logs.1.kind', 'node')
+            ->where('execution.logs.1.nodeKey', 'n1')
+            ->where('execution.logs.1.nodeType', 'trigger.manual')
+            ->where('execution.logs.1.nodeName', 'Manuel')
+            ->where('execution.logs.1.status', 'ok')
+            ->where('execution.logs.1.level', 'ok')
+            ->has('execution.logs.1.durationMs')
+            ->where('execution.logs.1.input', ['email' => 'person@example.com'])
+            ->where('execution.logs.1.output', ['ok' => true])
+            ->where('execution.logs.1.offsetMs', 12)
+            ->where('execution.logs.2.status', 'queued')
+            ->missing('execution.result'));
+});
+
+test('the journal projection is ordered by row id', function () {
+    [$user, $team] = teamWithMember();
+    $workflow = Workflow::factory()->for($team)->create();
+
+    $execution = WorkflowExecution::factory()->for($workflow)->create();
+
+    $first = WorkflowExecutionLog::factory()->for($execution, 'execution')->create(['message' => 'Ligne 1']);
+    $second = WorkflowExecutionLog::factory()->for($execution, 'execution')->create(['message' => 'Ligne 2']);
+
+    openExecutions($user, $team, ['execution' => $execution->id])
+        ->assertInertia(fn ($page) => $page
+            ->where('execution.logs.0.id', $first->id)
+            ->where('execution.logs.1.id', $second->id));
+});
+
+test('the history list items never carry logs or a result', function () {
+    [$user, $team] = teamWithMember();
+    $workflow = Workflow::factory()->for($team)->create();
+
+    WorkflowExecution::factory()->for($workflow)->create();
+
+    openExecutions($user, $team)
+        ->assertInertia(fn ($page) => $page
+            ->missing('executions.data.0.logs')
+            ->missing('executions.data.0.result'));
+});
+
+test('the page exposes the configured logs retention in days', function () {
+    [$user, $team] = teamWithMember();
+
+    config(['workflows.logs.retention_days' => 45]);
+
+    openExecutions($user, $team)
+        ->assertInertia(fn ($page) => $page
+            ->where('logs_retention_days', 45));
+});
+
+test('a deep link to another team execution leaks nothing', function () {
+    [$user, $team] = teamWithMember();
+    $foreign = WorkflowExecution::factory()->completed()->create();
+
+    openExecutions($user, $team, ['execution' => $foreign->id])
+        ->assertInertia(fn ($page) => $page
+            ->where('execution', null));
 });

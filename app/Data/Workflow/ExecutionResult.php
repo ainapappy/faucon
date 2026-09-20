@@ -35,4 +35,20 @@ final readonly class ExecutionResult
             'errors' => array_map(fn (ExecutionError $error): array => $error->toArray(), $this->errors),
         ];
     }
+
+    /**
+     * Compact shape persisted in `workflow_executions.result` (phase 8 D2):
+     * the per-node payloads live only in the log rows.
+     *
+     * @return array{status: string, durationMs: int, nodes: list<array{nodeKey: string, type: string, name: string, status: string, durationMs: int, error: array<string, mixed>|null}>, errors: list<array<string, mixed>>}
+     */
+    public function toSummaryArray(): array
+    {
+        return [
+            'status' => $this->status,
+            'durationMs' => $this->durationMs,
+            'nodes' => array_map(fn (NodeRunResult $node): array => $node->toSummaryArray(), $this->nodes),
+            'errors' => array_map(fn (ExecutionError $error): array => $error->toArray(), $this->errors),
+        ];
+    }
 }

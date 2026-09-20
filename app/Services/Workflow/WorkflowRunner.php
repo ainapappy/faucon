@@ -39,10 +39,18 @@ final class WorkflowRunner
      * @param  int|null  $timeoutMs  Override of the constructor budget for one run — the
      *                               queued job passes the async budget, the synchronous
      *                               test-run keeps the constructor default.
+     * @param  (callable(NodeRunResult): void)|null  $onNodeResult  Called after EVERY executed
+     *                                                              node (ok AND error, including
+     *                                                              NodeExecutionException/Throwable),
+     *                                                              never for the skipped ones
+     *                                                              (phase 8 — the queued job
+     *                                                              records log rows). The runner
+     *                                                              stays pure: it knows neither
+     *                                                              the database nor the redaction.
      * @return ExecutionResult Status is 'completed', 'failed' or 'cancelled' (the runner
      *                         never persists anything; the job maps the status).
      */
-    public function run(array $nodes, array $edges, array $sampleInput, ?callable $beforeNode = null, ?int $timeoutMs = null): ExecutionResult
+    public function run(array $nodes, array $edges, array $sampleInput, ?callable $beforeNode = null, ?int $timeoutMs = null, ?callable $onNodeResult = null): ExecutionResult
     {
         $startedAt = hrtime(true);
         $budgetMs = $timeoutMs ?? $this->timeoutMs;
@@ -139,14 +147,21 @@ final class WorkflowRunner
                     $execution->setVariable($result->exposeAs, $result->output);
                 }
 
-                $results[] = new NodeRunResult(
+                $nodeRun = new NodeRunResult(
                     nodeKey: $key,
                     type: (string) $node['type'],
                     name: (string) $node['name'],
                     status: 'ok',
                     durationMs: $durationMs,
                     output: $result->output,
+                    input: $input,
                 );
+
+                $results[] = $nodeRun;
+
+                if ($onNodeResult !== null) {
+                    $onNodeResult($nodeRun);
+                }
 
                 if ($result->isTerminal) {
                     continue;
@@ -169,7 +184,7 @@ final class WorkflowRunner
                     message: $exception->userMessage,
                 );
 
-                $results[] = new NodeRunResult(
+                $nodeRun = new NodeRunResult(
                     nodeKey: $key,
                     type: (string) $node['type'],
                     name: (string) $node['name'],
@@ -177,7 +192,15 @@ final class WorkflowRunner
                     durationMs: $this->elapsedMs($nodeStartedAt),
                     output: [],
                     error: $error,
+                    input: $input,
                 );
+
+                $results[] = $nodeRun;
+
+                if ($onNodeResult !== null) {
+                    $onNodeResult($nodeRun);
+                }
+
                 $runErrors[] = $error;
 
                 break;
@@ -192,7 +215,8 @@ final class WorkflowRunner
                 );
 
                 $runErrors[] = $error;
-                $results[] = new NodeRunResult(
+
+                $nodeRun = new NodeRunResult(
                     nodeKey: $key,
                     type: (string) $node['type'],
                     name: (string) $node['name'],
@@ -200,7 +224,14 @@ final class WorkflowRunner
                     durationMs: $this->elapsedMs($nodeStartedAt),
                     output: [],
                     error: $error,
+                    input: $input,
                 );
+
+                $results[] = $nodeRun;
+
+                if ($onNodeResult !== null) {
+                    $onNodeResult($nodeRun);
+                }
 
                 break;
             }

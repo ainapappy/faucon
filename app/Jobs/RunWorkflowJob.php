@@ -3,13 +3,20 @@
 namespace App\Jobs;
 
 use App\Data\Workflow\ExecutionResult;
+use App\Data\Workflow\NodeRunResult;
+use App\Enums\ExecutionLogLevel;
 use App\Enums\ExecutionStatus;
+use App\Enums\ExecutionTrigger;
+use App\Enums\NodeCategory;
 use App\Enums\WorkflowStatus;
 use App\Events\Workflows\WorkflowExecutionCompleted;
 use App\Events\Workflows\WorkflowExecutionFailed;
 use App\Events\Workflows\WorkflowExecutionStarted;
 use App\Models\WorkflowExecution;
 use App\Services\Workflow\ExecutionCancel;
+use App\Services\Workflow\Log\ExecutionLogMessages;
+use App\Services\Workflow\Log\ExecutionLogWriter;
+use App\Services\Workflow\NodeCatalog;
 use App\Services\Workflow\RetryPolicy;
 use App\Services\Workflow\WorkflowGraphMapper;
 use App\Services\Workflow\WorkflowRunner;
@@ -92,7 +99,7 @@ final class RunWorkflowJob implements ShouldQueue
     /**
      * Run the execution.
      */
-    public function handle(WorkflowRunner $runner, WorkflowGraphMapper $mapper): void
+    public function handle(WorkflowRunner $runner, WorkflowGraphMapper $mapper, ExecutionLogWriter $logs): void
     {
         $execution = WorkflowExecution::query()->find($this->executionId);
 
@@ -101,7 +108,7 @@ final class RunWorkflowJob implements ShouldQueue
         }
 
         if (ExecutionCancel::requested($this->executionId)) {
-            $this->persistCancelled($execution);
+            $this->persistCancelled($execution, $logs);
 
             return;
         }
@@ -115,6 +122,7 @@ final class RunWorkflowJob implements ShouldQueue
                 'validation',
                 'workflow_inactive',
                 __('Ce workflow n’est plus actif et ne peut pas être exécuté.'),
+                $logs,
             );
 
             return;
@@ -134,15 +142,29 @@ final class RunWorkflowJob implements ShouldQueue
 
         [$nodes, $edges] = $mapper->map($workflow);
 
+        // Phase 8: the journal opens with the attempt-start line, then the
+        // timeline rows appear in status queued, before any node executes.
+        $logs->recordEvent(
+            $execution,
+            ExecutionLogMessages::started($this->triggerLabel($nodes, $execution->triggered_by)),
+            ExecutionLogLevel::Info,
+            $this->attempts(),
+            $startedAt,
+        );
+        $logs->openAttempt($execution, $this->attempts(), $nodes, $startedAt);
+
         $result = $runner->run(
             $nodes,
             $edges,
             $execution->input ?? [],
             beforeNode: fn (string $nodeKey): bool => ExecutionCancel::requested($this->executionId),
             timeoutMs: (int) config('workflows.execution.timeout_ms', 120000),
+            onNodeResult: function (NodeRunResult $nodeRun) use ($logs, $execution, $startedAt): void {
+                $logs->recordNode($execution, $nodeRun, $this->attempts(), $startedAt);
+            },
         );
 
-        $this->persistResult($execution, $result, $startedAt);
+        $this->persistResult($execution, $result, $startedAt, $logs);
     }
 
     /**
@@ -157,19 +179,38 @@ final class RunWorkflowJob implements ShouldQueue
             return;
         }
 
-        $this->persistFailed(
-            $execution,
-            null,
-            'internal',
-            'job_failed',
-            __('Une erreur interne a interrompu l’exécution.'),
-        );
+        $writer = app(ExecutionLogWriter::class);
+        $message = __('Une erreur interne a interrompu l’exécution.');
+
+        $updated = $this->guardedUpdate($execution, [
+            'status' => ExecutionStatus::Failed,
+            'error' => [
+                'nodeKey' => null,
+                'type' => 'internal',
+                'reason' => 'job_failed',
+                'message' => $message,
+            ],
+            'finished_at' => now(),
+        ]);
+
+        if ($updated > 0) {
+            $writer->closeAttempt($execution, max(1, (int) $execution->attempt));
+            $writer->recordEvent(
+                $execution,
+                ExecutionLogMessages::failed($message),
+                ExecutionLogLevel::Error,
+                max(1, (int) $execution->attempt),
+                now(),
+            );
+
+            WorkflowExecutionFailed::dispatch($execution->fresh() ?? $execution);
+        }
     }
 
     /**
      * Map a runner result onto the persisted transitions (D1).
      */
-    private function persistResult(WorkflowExecution $execution, ExecutionResult $result, CarbonImmutable $startedAt): void
+    private function persistResult(WorkflowExecution $execution, ExecutionResult $result, CarbonImmutable $startedAt, ExecutionLogWriter $logs): void
     {
         $finishedAt = now();
         $durationMs = abs((int) round($startedAt->diffInMilliseconds($finishedAt)));
@@ -179,12 +220,21 @@ final class RunWorkflowJob implements ShouldQueue
 
             $this->guardedUpdate($execution, [
                 'status' => ExecutionStatus::Cancelled,
-                // Partial result: the sheet timeline shows the progress
-                // (executed nodes ok, the rest skipped).
-                'result' => $result->toArray(),
+                // Partial result, summary only since phase 8: the payloads
+                // live in the log rows.
+                'result' => $result->toSummaryArray(),
                 'finished_at' => $finishedAt,
                 'duration_ms' => $durationMs,
             ]);
+
+            $logs->closeAttempt($execution, $this->attempts());
+            $logs->recordEvent(
+                $execution,
+                ExecutionLogMessages::cancelled(),
+                ExecutionLogLevel::Info,
+                $this->attempts(),
+                $startedAt,
+            );
 
             return;
         }
@@ -204,11 +254,20 @@ final class RunWorkflowJob implements ShouldQueue
         if ($result->status === 'completed') {
             $execution->update([
                 'status' => ExecutionStatus::Completed,
-                'result' => $result->toArray(),
+                'result' => $result->toSummaryArray(),
                 'error' => null,
                 'finished_at' => $finishedAt,
                 'duration_ms' => $durationMs,
             ]);
+
+            $logs->closeAttempt($execution, $this->attempts());
+            $logs->recordEvent(
+                $execution,
+                ExecutionLogMessages::completed(),
+                ExecutionLogLevel::Ok,
+                $this->attempts(),
+                $startedAt,
+            );
 
             WorkflowExecutionCompleted::dispatch($execution);
 
@@ -216,6 +275,15 @@ final class RunWorkflowJob implements ShouldQueue
         }
 
         if (RetryPolicy::isRetryable($result) && $this->attempts() < $this->tries()) {
+            $logs->closeAttempt($execution, $this->attempts());
+            $logs->recordEvent(
+                $execution,
+                ExecutionLogMessages::retryScheduled($this->attempts() + 1, $this->tries(), $this->delayForNextAttempt()),
+                ExecutionLogLevel::Info,
+                $this->attempts(),
+                $startedAt,
+            );
+
             $execution->update([
                 'status' => ExecutionStatus::Pending,
                 'started_at' => null,
@@ -230,11 +298,20 @@ final class RunWorkflowJob implements ShouldQueue
 
         $execution->update([
             'status' => ExecutionStatus::Failed,
-            'result' => $result->toArray(),
+            'result' => $result->toSummaryArray(),
             'error' => $errorPayload,
             'finished_at' => $finishedAt,
             'duration_ms' => $durationMs,
         ]);
+
+        $logs->closeAttempt($execution, $this->attempts());
+        $logs->recordEvent(
+            $execution,
+            ExecutionLogMessages::failed($result->errors !== [] ? $result->errors[0]->message : null),
+            ExecutionLogLevel::Error,
+            $this->attempts(),
+            $startedAt,
+        );
 
         WorkflowExecutionFailed::dispatch($execution);
     }
@@ -243,7 +320,7 @@ final class RunWorkflowJob implements ShouldQueue
      * Persist the cancelled status (flag honored at the start of a run) and
      * drop the flag. Guarded: a final state is never overwritten.
      */
-    private function persistCancelled(WorkflowExecution $execution): void
+    private function persistCancelled(WorkflowExecution $execution, ExecutionLogWriter $logs): void
     {
         $updated = $this->guardedUpdate($execution, [
             'status' => ExecutionStatus::Cancelled,
@@ -251,6 +328,8 @@ final class RunWorkflowJob implements ShouldQueue
         ]);
 
         if ($updated > 0) {
+            // Offset 0: the run never started, there is no attempt start.
+            $logs->recordEvent($execution, ExecutionLogMessages::cancelled(), ExecutionLogLevel::Info, max(1, (int) $execution->attempt), now());
             ExecutionCancel::clear($this->executionId);
         }
     }
@@ -259,7 +338,7 @@ final class RunWorkflowJob implements ShouldQueue
      * Persist a failed status from an explicit reason — guarded the same
      * way, and dispatching the failure event only on an effective write.
      */
-    private function persistFailed(WorkflowExecution $execution, ?string $nodeKey, string $type, string $reason, string $message): void
+    private function persistFailed(WorkflowExecution $execution, ?string $nodeKey, string $type, string $reason, string $message, ExecutionLogWriter $logs): void
     {
         $updated = $this->guardedUpdate($execution, [
             'status' => ExecutionStatus::Failed,
@@ -273,8 +352,35 @@ final class RunWorkflowJob implements ShouldQueue
         ]);
 
         if ($updated > 0) {
+            $logs->recordEvent($execution, ExecutionLogMessages::failed($message), ExecutionLogLevel::Error, max(1, (int) $execution->attempt), now());
             WorkflowExecutionFailed::dispatch($execution->fresh() ?? $execution);
         }
+    }
+
+    /**
+     * The journal label of the run trigger (A8-5): never the webhook path
+     * or id (public secret). The schedule cron is read in the config of the
+     * mapped trigger node.
+     *
+     * @param  list<array{key: string, type: string, name: string, config: array<string, mixed>}>  $nodes
+     */
+    private function triggerLabel(array $nodes, ExecutionTrigger $trigger): string
+    {
+        if ($trigger === ExecutionTrigger::Schedule) {
+            $cron = '';
+
+            foreach ($nodes as $node) {
+                if (NodeCatalog::categoryFor((string) $node['type']) === NodeCategory::Trigger) {
+                    $cron = (string) ($node['config']['cron'] ?? '');
+
+                    break;
+                }
+            }
+
+            return __('Planifié — cron :cron', ['cron' => $cron]);
+        }
+
+        return $trigger->value === ExecutionTrigger::Webhook->value ? __('Webhook') : __('Manuel');
     }
 
     /**

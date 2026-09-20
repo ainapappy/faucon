@@ -2,10 +2,17 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ExecutionLogKind;
+use App\Enums\ExecutionLogLevel;
 use App\Enums\ExecutionStatus;
 use App\Enums\ExecutionTrigger;
 use App\Models\Team;
 use App\Models\Workflow;
+use App\Models\WorkflowExecution;
+use App\Models\WorkflowExecutionLog;
+use App\Models\WorkflowNode;
+use App\Services\Workflow\Log\ExecutionLogMessages;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -101,12 +108,192 @@ class DemoWorkflowExecutionSeeder extends Seeder
                 'type' => 'action.http',
                 'reason' => 'network_error',
                 'message' => __('Le node « :name » n’a pas pu joindre le service distant.', [
-                    'name' => $workflow->nodes->firstWhere('key', $failingNode)?->name ?? $failingNode,
+                    'name' => $workflow->nodes->firstWhere('key', $failingNode)->name ?? $failingNode,
                 ]),
             ];
         }
 
-        $workflow->executions()->create($attributes);
+        $execution = $workflow->executions()->create($attributes);
+
+        if ($status !== ExecutionStatus::Pending) {
+            $this->seedLogs($execution, $status, $failingNode, $startedAt);
+        }
+    }
+
+    /**
+     * Write the journal rows of one seeded run, coherent with its status
+     * (phase 8 directive): one row per node per attempt plus the cycle
+     * events; the failed run spans TWO attempts (retry in between).
+     */
+    private function seedLogs(WorkflowExecution $execution, ExecutionStatus $status, ?string $failingNode, CarbonInterface $start): void
+    {
+        if ($status === ExecutionStatus::Failed) {
+            $this->seedAttempt($execution, 1, $failingNode, $start, retry: true);
+            $this->seedAttempt($execution, 2, $failingNode, $start);
+
+            return;
+        }
+
+        $this->seedAttempt($execution, 1, $failingNode, $start,
+            running: $status === ExecutionStatus::Running,
+            cancelled: $status === ExecutionStatus::Cancelled);
+    }
+
+    /**
+     * Write the rows of ONE attempt: node rows (ok / error / skipped /
+     * queued) plus the attempt events, with plausible timings.
+     */
+    private function seedAttempt(
+        WorkflowExecution $execution,
+        int $attempt,
+        ?string $failingNode,
+        CarbonInterface $start,
+        bool $retry = false,
+        bool $running = false,
+        bool $cancelled = false,
+    ): void {
+        $nodes = $execution->workflow->nodes;
+        $offset = 0;
+
+        $this->logRow($execution, [
+            'attempt' => $attempt,
+            'kind' => ExecutionLogKind::Event,
+            'level' => ExecutionLogLevel::Info,
+            'message' => ExecutionLogMessages::started($this->triggerLabel($execution->workflow)),
+            'offset_ms' => 0,
+        ]);
+
+        foreach ($nodes as $index => $node) {
+            $isFailing = $node->key === $failingNode;
+            $isLast = $index === $nodes->count() - 1;
+            $queued = $running && $isLast;
+            $skipped = $cancelled && $isLast;
+
+            $row = [
+                'attempt' => $attempt,
+                'kind' => ExecutionLogKind::Node,
+                'node_key' => $node->key,
+                'node_type' => $node->type,
+                'node_name' => $node->name,
+            ];
+
+            if ($isFailing) {
+                $duration = 900;
+                $offset += $duration;
+
+                $row += [
+                    'status' => 'error',
+                    'duration_ms' => $duration,
+                    'level' => ExecutionLogLevel::Error,
+                    'message' => ExecutionLogMessages::nodeFailed(__('Le service distant n a pas repondu.')),
+                    'input' => $this->nodeInput($node, $execution),
+                    'error' => [
+                        'nodeKey' => $node->key,
+                        'type' => $node->type,
+                        'reason' => 'network_error',
+                        'message' => __('Le service distant n a pas repondu.'),
+                    ],
+                    'offset_ms' => $offset,
+                ];
+            } elseif ($queued || $skipped) {
+                $row += [
+                    'status' => $queued ? 'queued' : 'skipped',
+                    'level' => ExecutionLogLevel::Info,
+                    'offset_ms' => $offset,
+                ];
+            } else {
+                $duration = fake()->numberBetween(5, 600);
+                $offset += $duration;
+
+                $row += [
+                    'status' => 'ok',
+                    'duration_ms' => $duration,
+                    'level' => ExecutionLogLevel::Ok,
+                    'message' => ExecutionLogMessages::nodeCompleted($node->name, $duration),
+                    'input' => $this->nodeInput($node, $execution),
+                    'output' => ['ok' => true],
+                    'offset_ms' => $offset,
+                ];
+            }
+
+            $this->logRow($execution, $row);
+        }
+
+        $this->seedAttemptEnd($execution, $attempt, $retry, $running, $cancelled, $offset);
+    }
+
+    /**
+     * Write the trailing event of one attempt: retry announcement, terminal
+     * line, or nothing while the run is still in flight.
+     */
+    private function seedAttemptEnd(WorkflowExecution $execution, int $attempt, bool $retry, bool $running, bool $cancelled, int $offset): void
+    {
+        if ($retry) {
+            $this->logRow($execution, [
+                'attempt' => $attempt, 'kind' => ExecutionLogKind::Event,
+                'level' => ExecutionLogLevel::Info,
+                'message' => ExecutionLogMessages::retryScheduled(2, 2, 30),
+                'offset_ms' => $offset,
+            ]);
+
+            return;
+        }
+
+        if ($running) {
+            return;
+        }
+
+        $failed = $execution->status === ExecutionStatus::Failed;
+
+        $this->logRow($execution, [
+            'attempt' => $attempt,
+            'kind' => ExecutionLogKind::Event,
+            'level' => $failed ? ExecutionLogLevel::Error : ($cancelled ? ExecutionLogLevel::Info : ExecutionLogLevel::Ok),
+            'message' => $failed
+                ? ExecutionLogMessages::failed(__('Le service distant n a pas repondu.'))
+                : ($cancelled ? ExecutionLogMessages::cancelled() : ExecutionLogMessages::completed()),
+            'offset_ms' => $offset,
+        ]);
+    }
+
+    /**
+     * Create one log row (payloads included — the demo shows the redaction
+     * with a masked token in the webhook input).
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function logRow(WorkflowExecution $execution, array $attributes): WorkflowExecutionLog
+    {
+        return $execution->logs()->create($attributes);
+    }
+
+    /**
+     * The plausible input of a node: the webhook payload (with a masked
+     * secret) for the trigger, an upstream output otherwise.
+     *
+     * @return array<string, mixed>
+     */
+    private function nodeInput(WorkflowNode $node, WorkflowExecution $execution): array
+    {
+        if ($node->type === 'trigger.webhook') {
+            return ['event' => 'demo', 'id' => $execution->id, 'api_token' => '[masqué]'];
+        }
+
+        return ['ok' => true];
+    }
+
+    /**
+     * The journal label of the run trigger (mirror of the job rule).
+     */
+    private function triggerLabel(Workflow $workflow): string
+    {
+        $trigger = $workflow->nodes->first(fn (WorkflowNode $node) => str_starts_with($node->type, 'trigger.'));
+
+        return match ($trigger?->type) {
+            'trigger.webhook' => __('Webhook'),
+            'trigger.schedule' => __('Planifié — cron :cron', ['cron' => (string) ($trigger?->config['cron'] ?? '')]),
+            default => __('Manuel'),
+        };
     }
 
     /**
@@ -131,7 +318,6 @@ class DemoWorkflowExecutionSeeder extends Seeder
                     'name' => $node->name,
                     'status' => 'skipped',
                     'durationMs' => 0,
-                    'output' => [],
                     'error' => null,
                 ];
 
@@ -146,7 +332,6 @@ class DemoWorkflowExecutionSeeder extends Seeder
                 'name' => $node->name,
                 'status' => $failedHere ? 'error' : 'ok',
                 'durationMs' => $durationMs,
-                'output' => $failedHere ? [] : ['ok' => true],
                 'error' => $failedHere ? [
                     'nodeKey' => $node->key,
                     'type' => $node->type,
