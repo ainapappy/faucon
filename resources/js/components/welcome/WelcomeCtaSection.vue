@@ -116,6 +116,10 @@ const templatesUrl = templatesIndex().url;
 }
 
 .cta-ghost {
+    /* Variant default du Button = bg-primary plein ; la maquette veut un
+       ghost transparent sur le panneau gradient (fond, hover et couleur
+       textes repris du .cta-panel). Spécificité .cta-ghost[data-v] > utilities. */
+    background: transparent;
     border: 1px solid hsl(26 83% 12% / 0.35);
     color: inherit;
 
