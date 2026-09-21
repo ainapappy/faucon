@@ -28,7 +28,7 @@ const demoUrl = computed(() =>
                 Propulsé par l'IA — nodes OpenAI &amp; Anthropic
             </span>
             <h1 class="anim-in d-1">
-                L'automatisation,
+                <span class="block">L'automatisation,</span>
                 <span class="word">
                     <Transition name="word">
                         <span :key="wordIndex" class="grad-text">{{
