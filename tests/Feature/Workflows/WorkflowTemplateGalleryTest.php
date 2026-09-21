@@ -27,6 +27,10 @@ test('the gallery lists system and current team templates, never foreign ones', 
             ->where('templates.0.nodesCount', 2)
             ->where('templates.0.graph.nodes.0.key', 'trigger')
             ->where('templates.0.graph.nodes.0.positionX', 100)
+            // Preview-only projection (phase 13): the configs and the edge
+            // handles never leave the server.
+            ->missing('templates.0.graph.nodes.0.config')
+            ->missing('templates.0.graph.edges.0.sourceHandle')
             ->where('templates.1.id', $mine->id)
             ->where('templates.1.origin', 'team')
             ->missing('templates.2')

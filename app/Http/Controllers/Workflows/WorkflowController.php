@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Workflows;
 
 use App\Actions\Workflows\CreateWorkflow;
-use App\Data\Workflow\NodeDefinition;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Workflows\CreateWorkflowRequest;
 use App\Http\Requests\Workflows\UpdateWorkflowRequest;
@@ -41,7 +40,7 @@ class WorkflowController extends Controller
 
         return Inertia::render('workflows/Index', [
             'workflows' => $workflows,
-            'nodeTypes' => $this->nodeTypes(),
+            'nodeTypes' => NodeCatalog::all(),
             'permissions' => $request->user()->toTeamPermissions($currentTeam),
             'templateCategories' => WorkflowTemplate::query()
                 ->visibleFor($currentTeam)
@@ -107,7 +106,7 @@ class WorkflowController extends Controller
                 ])->all(),
             ],
             'integrations' => IntegrationSummaries::forTeam($currentTeam),
-            'nodeTypes' => $this->nodeTypes(),
+            'nodeTypes' => NodeCatalog::all(),
             'permissions' => $request->user()->toTeamPermissions($currentTeam),
         ]);
     }
@@ -184,15 +183,5 @@ class WorkflowController extends Controller
             'nodesCount' => $workflow->nodes_count,
             'triggerType' => $workflow->triggerNode?->type,
         ];
-    }
-
-    /**
-     * Get the node catalog as plain arrays for the Inertia props.
-     *
-     * @return array<string, NodeDefinition>
-     */
-    private function nodeTypes(): array
-    {
-        return NodeCatalog::all();
     }
 }

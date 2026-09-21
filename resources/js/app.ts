@@ -5,7 +5,6 @@ import AuthSplitLayout from '@/layouts/auth/AuthSplitLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
 import { setUrlDefaults } from '@/wayfinder';
-import { configureEcho } from '@laravel/echo-vue';
 
 /*
  * Wayfinder : les routes préfixées par l'équipe ({current_team}, {team})
@@ -21,19 +20,12 @@ setUrlDefaults(() => {
     return slug ? { current_team: slug, team: slug } : {};
 });
 
-// Echo ne vit que dans le navigateur : en SSR, pusher-js n'a pas de clé
-// et rejetterait une promesse non gérée au warmup du module graph...
-if (typeof window !== 'undefined') {
-    configureEcho({
-        broadcaster: 'reverb',
-    });
-
-    // Écouteur de debug Reverb, actif seulement en développement...
-    if (import.meta.env.DEV) {
-        void import('@/lib/realtimeDebug').then((m) =>
-            m.initializeRealtimeDebug(),
-        );
-    }
+// Echo ne sert qu'au debug Reverb en développement (lib/realtimeDebug,
+// qui configure Echo lui-même). Import dynamique + garde DEV : en
+// production, ni ce module ni pusher-js ne sont chargés — et le bloc
+// est éliminé statiquement du bundle.
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+    void import('@/lib/realtimeDebug').then((m) => m.initializeRealtimeDebug());
 }
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';

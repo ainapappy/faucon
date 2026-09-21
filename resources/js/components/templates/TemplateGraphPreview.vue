@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { buildPreviewLayout } from '@/lib/templatePreview';
-import type { NodeTypeCatalog, TemplateGraph } from '@/types';
+import type { NodeTypeCatalog, TemplatePreviewGraph } from '@/types';
 
 /*
  * Aperçu SVG statique du graphe d'un template (maquette templates.html,
@@ -11,7 +11,7 @@ import type { NodeTypeCatalog, TemplateGraph } from '@/types';
  * des <text> SVG : le contenu du snapshot n'est jamais interprété comme HTML.
  */
 const props = defineProps<{
-    graph: TemplateGraph;
+    graph: TemplatePreviewGraph;
     nodeTypes: NodeTypeCatalog;
 }>();
 

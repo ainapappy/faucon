@@ -12,7 +12,7 @@
  * (`node.name` tronqué) reste affiché dans l'aperçu.
  */
 import { categoryPresentation } from '@/lib/nodeCategories';
-import type { NodeTypeCatalog, TemplateGraph } from '@/types';
+import type { NodeTypeCatalog, TemplatePreviewGraph } from '@/types';
 
 /** Largeur du viewBox de l'aperçu (valeur maquette). */
 export const PREVIEW_VIEW_WIDTH = 260;
@@ -96,7 +96,7 @@ export function previewEdgePath(
  * - arêtes pendantes (clé source ou cible absente) ignorées silencieusement.
  */
 export function buildPreviewLayout(
-    graph: TemplateGraph,
+    graph: TemplatePreviewGraph,
     nodeTypes: NodeTypeCatalog,
 ): TemplatePreviewLayout {
     const graphNodes = graph.nodes ?? [];

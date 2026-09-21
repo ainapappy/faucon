@@ -11,6 +11,7 @@ import type {
     NodeCategory,
     NodeTypeCatalog,
     NodeTypeDefinition,
+    TemplatePreviewGraph,
     WorkflowGraphPayload,
 } from '@/types';
 
@@ -193,6 +194,40 @@ describe('buildPreviewLayout', () => {
             nodes: [],
             edgePaths: [],
         });
+    });
+
+    it('renders identically from the slim preview graph served by templates.index', () => {
+        // Phase 13 : `templates.index` amincit le graphe (sans config ni
+        // sourceHandle) — le rendu doit être strictement identique à celui
+        // calculé depuis le snapshot complet du builder.
+        const full = graph(
+            [
+                node('a', 'trigger.webhook', 'Webhook', 100, 100),
+                node('b', 'logic.condition', 'Condition', 420, 100),
+                node('c', 'ai.classification', 'Classification IA', 420, 300),
+                node('d', 'action.email', 'Email', 740, 100),
+            ],
+            [edge('a', 'b'), edge('b', 'c'), edge('b', 'd')],
+        );
+        const slim: TemplatePreviewGraph = {
+            nodes: full.nodes.map(
+                ({ key, type, name, positionX, positionY }) => ({
+                    key,
+                    type,
+                    name,
+                    positionX,
+                    positionY,
+                }),
+            ),
+            edges: full.edges.map(({ sourceNodeKey, targetNodeKey }) => ({
+                sourceNodeKey,
+                targetNodeKey,
+            })),
+        };
+
+        expect(buildPreviewLayout(slim, catalog)).toEqual(
+            buildPreviewLayout(full, catalog),
+        );
     });
 });
 

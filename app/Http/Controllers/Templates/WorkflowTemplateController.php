@@ -33,7 +33,7 @@ class WorkflowTemplateController extends Controller
                 'category' => $template->category,
                 'origin' => $template->origin->value,
                 'nodesCount' => count($template->graph['nodes'] ?? []),
-                'graph' => $template->graph,
+                'graph' => $this->previewGraph($template->graph),
             ])
             ->all();
 
@@ -42,5 +42,41 @@ class WorkflowTemplateController extends Controller
             'nodeTypes' => NodeCatalog::all(),
             'permissions' => $request->user()->toTeamPermissions($currentTeam),
         ]);
+    }
+
+    /**
+     * Project the stored graph to the preview-only shape consumed by the
+     * front `buildPreviewLayout` (nodes key/type/name/position, edges
+     * source/target) — node configs and edge handles never leave the server.
+     *
+     * Positions pass through as stored: the `graph` column is JSON (no
+     * scalar cast), the builder stores whole numbers, and the gallery
+     * contract pins them strictly — a float coercion would rewrite 100 as
+     * 100.0 on the wire and inflate the payload instead of shrinking it.
+     *
+     * @param  array{nodes: list<array{key: string, type: string, name: string, config: array<string, mixed>, positionX: int|float, positionY: int|float}>, edges: list<array{sourceNodeKey: string, targetNodeKey: string, sourceHandle: string|null}>}  $graph
+     * @return array{nodes: list<array{key: string, type: string, name: string, positionX: int|float, positionY: int|float}>, edges: list<array{sourceNodeKey: string, targetNodeKey: string}>}
+     */
+    private function previewGraph(array $graph): array
+    {
+        return [
+            'nodes' => array_map(
+                fn (array $node): array => [
+                    'key' => $node['key'],
+                    'type' => $node['type'],
+                    'name' => $node['name'],
+                    'positionX' => $node['positionX'],
+                    'positionY' => $node['positionY'],
+                ],
+                $graph['nodes'],
+            ),
+            'edges' => array_map(
+                fn (array $edge): array => [
+                    'sourceNodeKey' => $edge['sourceNodeKey'],
+                    'targetNodeKey' => $edge['targetNodeKey'],
+                ],
+                $graph['edges'],
+            ),
+        ];
     }
 }
