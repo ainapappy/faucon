@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue';
+import { useId } from 'vue';
 
 defineOptions({
     inheritAttrs: false,
@@ -10,20 +11,50 @@ type Props = {
 };
 
 defineProps<Props>();
+
+/*
+ * Logo Faucon (miroir de .knowledge/design/img/logo.svg) : aile en
+ * gradient ambre #f59e0b → #ea580c, trait blanc, œil sombre. Le rendu
+ * est en couleurs de marque — il ne dépend plus de currentColor.
+ * L'id du gradient est unique par instance (useId) pour éviter les
+ * collisions de <defs> quand plusieurs logos coexistent sur une page.
+ */
+const gradientId = `faucon-logo-fw-${useId()}`;
 </script>
 
 <template>
     <svg
         xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 40 42"
+        viewBox="0 0 48 48"
         :class="className"
         v-bind="$attrs"
+        aria-hidden="true"
     >
+        <defs>
+            <linearGradient
+                :id="gradientId"
+                x1="6"
+                y1="40"
+                x2="44"
+                y2="8"
+                gradientUnits="userSpaceOnUse"
+            >
+                <stop offset="0" stop-color="#f59e0b" />
+                <stop offset="1" stop-color="#ea580c" />
+            </linearGradient>
+        </defs>
         <path
-            fill="currentColor"
-            fill-rule="evenodd"
-            clip-rule="evenodd"
-            d="M17.2 5.633 8.6.855 0 5.633v26.51l16.2 9 16.2-9v-8.442l7.6-4.223V9.856l-8.6-4.777-8.6 4.777V18.3l-5.6 3.111V5.633ZM38 18.301l-5.6 3.11v-6.157l5.6-3.11V18.3Zm-1.06-7.856-5.54 3.078-5.54-3.079 5.54-3.078 5.54 3.079ZM24.8 18.3v-6.157l5.6 3.111v6.158L24.8 18.3Zm-1 1.732 5.54 3.078-13.14 7.302-5.54-3.078 13.14-7.3v-.002Zm-16.2 7.89 7.6 4.222V38.3L2 30.966V7.92l5.6 3.111v16.892ZM8.6 9.3 3.06 6.222 8.6 3.143l5.54 3.08L8.6 9.3Zm21.8 15.51-13.2 7.334V38.3l13.2-7.334v-6.156ZM9.6 11.034l5.6-3.11v14.6l-5.6 3.11v-14.6Z"
+            :fill="`url(#${gradientId})`"
+            d="M5 40 C5 22 16 8 42 8 L38 13 L44 14.5 L35.5 19 C31 30 20 38 5 40 Z"
         />
+        <path
+            fill="none"
+            stroke="#ffffff"
+            stroke-opacity="0.35"
+            stroke-width="2"
+            stroke-linecap="round"
+            d="M13 32.5 C19 27.5 24 23.5 30 20.5"
+        />
+        <circle cx="34.2" cy="13.6" r="2" fill="#1c1917" />
     </svg>
 </template>

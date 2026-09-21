@@ -1,0 +1,42 @@
+// ============================================================
+// Faucon — Page d'accueil « welcome » (maquette welcome.html)
+// Styles partagés entre les composants de la landing
+// (components/welcome/*). Les classes d'entrée .anim-in et
+// .d-1…d-5 (animations de la maquette) sont déjà portées
+// globalement par _auth.scss — seul .d-6 manque ici.
+// Les styles propres à chaque section vivent en <style scoped>
+// dans leur composant.
+// ============================================================
+
+// Délai d'entrée du 6e élément (carte démo) — base.css de la maquette
+.d-6 {
+    animation-delay: 0.3s;
+}
+
+// ---------- Reveal au scroll (directive lib/scrollReveal.ts) ----------
+.reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition:
+        opacity 0.55s ease,
+        transform 0.65s cubic-bezier(0.16, 0.84, 0.3, 1);
+    will-change: opacity, transform;
+}
+
+.reveal.revealed {
+    opacity: 1;
+    transform: none;
+}
+
+// ---------- Accessibilité : mouvement réduit ----------
+@media (prefers-reduced-motion: reduce) {
+    .reveal {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+
+    .d-6 {
+        animation-delay: 0s;
+    }
+}

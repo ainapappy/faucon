@@ -7,4 +7,5 @@ export * from './notifications';
 export * from './teams';
 export * from './templates';
 export * from './ui';
+export * from './welcome';
 export * from './workflows';

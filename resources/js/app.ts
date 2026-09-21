@@ -28,7 +28,7 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
     void import('@/lib/realtimeDebug').then((m) => m.initializeRealtimeDebug());
 }
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'Faucon';
 
 // Toutes les pages auth sont rendues dans le layout split (maquettes
 // login / register, décliné sur forgot/reset/confirm password).

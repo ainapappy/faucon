@@ -81,7 +81,7 @@ const panel = computed(() => brandPanels[props.variant]);
 <template>
     <section class="auth-panel">
         <Link :href="home()" class="auth-brand">
-            <AppLogoIcon class="text-brand" />
+            <AppLogoIcon />
             {{ appName }}
         </Link>
 

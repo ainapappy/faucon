@@ -30,9 +30,7 @@
             }
         </style>
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
         @fonts
 
@@ -43,7 +41,7 @@
             ->when(file_exists(resource_path("js/pages/{$page['component']}.vue")), fn ($entries) => $entries->push($pageComponent))
             ->all())
         <x-inertia::head>
-            <title>{{ config('app.name', 'Laravel') }}</title>
+            <title>{{ config('app.name', 'Faucon') }}</title>
         </x-inertia::head>
     </head>
     <body class="font-sans antialiased">
