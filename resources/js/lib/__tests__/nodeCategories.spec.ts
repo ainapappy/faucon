@@ -58,15 +58,15 @@ describe('nodeCategoryOrder (contrat design-system, ordre validé CVD)', () => {
     });
 
     it('fige la correspondance catégorie → token --cat-N (Logique = 5, IA = 3, Actions = 4)', () => {
-        expect(nodeCategoryOrder.map((category) => category.colorToken)).toEqual(
-            [
-                'var(--cat-1)',
-                'var(--cat-2)',
-                'var(--cat-5)',
-                'var(--cat-3)',
-                'var(--cat-4)',
-            ],
-        );
+        expect(
+            nodeCategoryOrder.map((category) => category.colorToken),
+        ).toEqual([
+            'var(--cat-1)',
+            'var(--cat-2)',
+            'var(--cat-5)',
+            'var(--cat-3)',
+            'var(--cat-4)',
+        ]);
     });
 
     it('accorde colorClass au token et interdit tout doublon d’id, de libellé ou de token', () => {

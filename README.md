@@ -99,13 +99,15 @@ cohérent et committable.
 | 11  | Sécurité & durcissement         | Audit complet : autorisation, SSRF, rate limiting, XSS, secrets            |   ✅   |
 | 12  | Tests                           | Couverture des zones critiques, edge cases, tests d'intégration            |   ✅   |
 | 13  | Optimisation & qualité          | N+1, payloads Inertia, code-splitting, mesures avant / après               |   ✅   |
-| 14  | Documentation & finalisation    | docs/, guides d'extension, exemples, nettoyage                             |   ⏳   |
+| 14  | Documentation & finalisation    | docs/, guides d'extension, exemples, nettoyage                             |   ✅   |
 
 > **Socle déjà en place** : squelette Laravel 13 + Inertia v3, authentification Fortify complète
 > (login, enregistrement, 2FA TOTP, passkeys), gestion des équipes et invitations, pages settings,
 > kit UI shadcn-vue, chaîne qualité outillée (Pest, PHPStan / Larastan, Vitest).
 
 Légende : ⏳ à venir · 🚧 en cours · ✅ terminé
+
+🎉 **Roadmap complète** — les 14 phases sont livrées.
 
 ## 🏗️ Architecture
 
@@ -195,6 +197,18 @@ Créez au préalable la base `faucon` sur votre serveur (`CREATE DATABASE faucon
 composer test     # Pint + PHPStan + suite Pest complète
 npm run build     # build de production
 ```
+
+## 📚 Documentation
+
+La documentation vit dans [`docs/`](docs/README.md), organisée par lectorat :
+
+| Espace                                              | Pour qui                                                          |
+| --------------------------------------------------- | ----------------------------------------------------------------- |
+| [📘 Utilisation](docs/usage/README.md)              | utilisateurs du produit                                           |
+| [🛠️ Technique](docs/technical/README.md)            | développeurs — architecture, moteur, sécurité, guides d'extension |
+| [📖 Dictionnaire](docs/wiki/dictionnaire.md)        | tout terme technique, défini dans le contexte de Faucon           |
+| [📔 Journal de développement](docs/diary/README.md) | le récit, phase par phase                                         |
+| [📋 Rapports de phase](docs/reports/)               | le détail chiffré de chaque phase                                 |
 
 ## 📄 Licence
 

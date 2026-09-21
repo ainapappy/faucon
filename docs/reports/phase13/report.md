@@ -25,8 +25,8 @@ sondage de 98 hashes). Suites finales : **Pest 841/841 (3 316 assertions)**, **V
   `DashboardTest` : query log filtré sur le nom de table métier) : workflows.index = **3**
   requêtes quel que soit le volume (preuve 5 → 15 workflows dans le test) ;
   workflow-executions.index = **4** sans deep link / **7** avec (le +3 = find + eager workflow
-  + eager logs — contrat phase 7/8 épinglé, pas optimisé) ; prop racine notifications = **2**
-  exactement (count + take(5))
+    - eager logs — contrat phase 7/8 épinglé, pas optimisé) ; prop racine notifications = **2**
+      exactement (count + take(5))
 - `resources/js/lib/__tests__/realtimeDebug.spec.ts` — 5 tests : le module configure Echo
   lui-même (`configureEcho({ broadcaster: 'reverb' })` une fois), canal
   `VITE_REVERB_APP_CHANNEL || 'debug'`, routage DebugPing → toast, warn sans abonnement si
@@ -56,9 +56,9 @@ sondage de 98 hashes). Suites finales : **Pest 841/841 (3 316 assertions)**, **V
   `WorkflowTemplateListItem.graph: TemplatePreviewGraph` ; `TemplateGraph` (= payload
   builder) inchangé
 - `resources/js/lib/templatePreview.ts` — signature `buildPreviewLayout(graph:
-  TemplatePreviewGraph, …)` ; **corps intouché d'une ligne** (assignabilité structurelle)
+TemplatePreviewGraph, …)` ; **corps intouché d'une ligne** (assignabilité structurelle)
 - `resources/js/components/templates/TemplateGraphPreview.vue` — prop `graph:
-  TemplatePreviewGraph`
+TemplatePreviewGraph`
 - `resources/js/lib/__tests__/templatePreview.spec.ts` — +1 test d'épinglage : rendu
   strictement identique depuis le graphe aminci (`toEqual` du layout complet)
 - `README.md` — feuille de route : phase 13 → ✅
@@ -97,13 +97,13 @@ introduit, aucune validation requise).
   **208 tests / 21 fichiers**.
 - **Budgets de requêtes épinglés** (filtre sur table métier, pas le bruit framework) :
 
-| Page / prop                         | Compte épinglé | Preuve anti-N+1                 |
-| ----------------------------------- | :------------: | ------------------------------- |
-| `workflows.index`                   |       3        | identique à 5 et 15 workflows   |
-| `workflow-executions.index` (liste) |       4        | identique à 5 et 15 exécutions  |
-| `workflow-executions.index` (+ `?execution=`) | 7 (4+3) | +3 = find + 2 eagers (contrat 7/8) |
-| Prop racine `notifications`         |       2        | count + take(5), jamais /notif  |
-| `dashboard` (pin phase 10)          |       5        | non cassé                       |
+| Page / prop                                   | Compte épinglé | Preuve anti-N+1                    |
+| --------------------------------------------- | :------------: | ---------------------------------- |
+| `workflows.index`                             |       3        | identique à 5 et 15 workflows      |
+| `workflow-executions.index` (liste)           |       4        | identique à 5 et 15 exécutions     |
+| `workflow-executions.index` (+ `?execution=`) |    7 (4+3)     | +3 = find + 2 eagers (contrat 7/8) |
+| Prop racine `notifications`                   |       2        | count + take(5), jamais /notif     |
+| `dashboard` (pin phase 10)                    |       5        | non cassé                          |
 
 ### Commands Executed
 
@@ -149,7 +149,7 @@ grep -l pusher public/build/assets/*.js         # M7 : 1 → 0 (borne dure F1)
 ### Gotchas & Solutions
 
 - **Inertia v3 inline la page différemment de v2** : `<script data-page="app"
-  type="application/json">{json}</script>` (vendor `View/Components/App.php:29`) et non
+type="application/json">{json}</script>` (vendor `View/Components/App.php:29`) et non
   `data-page="{json}"` — la regex de la sonde M5 a été adaptée.
 - **`positionX`/`positionY` : cast interdit** — la colonne `graph` est JSON sans cast
   scalaire et `AssertableJson::where()` est un `assertSame` strict : caster en float

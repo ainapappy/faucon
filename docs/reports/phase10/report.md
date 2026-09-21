@@ -11,10 +11,11 @@ décision utilisateur), endpoints notifications (index paginé, read idempotent,
 racine `notifications` (unreadCount + 5 non-lues). Frontend : page Dashboard fidèle à la maquette
 **corrigée au préalable** (4 widgets sans données réelles corrigés), graphe SVG maison avec tabs
 7/14/30 et skeletons sur widgets différés, cloche de notifications dans le shell (badge, mark-read
-+ deep-link, tout marquer lu), page historique `notifications/Index`, entrée « Exécutions » de
-sidebar ajoutée, audit 7 états × responsive écran par écran (trous corrigés : un seul trouvé).
-Suites finales : **Pest 770/770 (3 016 assertions)**, **Vitest 170/170**, PHPStan 0 erreur,
-vue-tsc 0 erreur, Pint propre, `npm run build` OK.
+
+- deep-link, tout marquer lu), page historique `notifications/Index`, entrée « Exécutions » de
+  sidebar ajoutée, audit 7 états × responsive écran par écran (trous corrigés : un seul trouvé).
+  Suites finales : **Pest 770/770 (3 016 assertions)**, **Vitest 170/170**, PHPStan 0 erreur,
+  vue-tsc 0 erreur, Pint propre, `npm run build` OK.
 
 ## Implementation
 
@@ -71,11 +72,11 @@ Maquette (source de vérité, corrigée AVANT le lot D) :
 
 ### Routes
 
-| Méthode   | URI                        | Nom                    | Notes                                   |
-| --------- | -------------------------- | ---------------------- | --------------------------------------- |
-| GET       | `notifications`            | `notifications.index`  | paginé 15/page, paginator aplati        |
-| PATCH     | `notifications/{notification}` | `notifications.read` | `whereUuid`, user-scoped, idempotent  |
-| POST      | `notifications/read-all`   | `notifications.read-all` | mass update des non-lues             |
+| Méthode | URI                            | Nom                      | Notes                                |
+| ------- | ------------------------------ | ------------------------ | ------------------------------------ |
+| GET     | `notifications`                | `notifications.index`    | paginé 15/page, paginator aplati     |
+| PATCH   | `notifications/{notification}` | `notifications.read`     | `whereUuid`, user-scoped, idempotent |
+| POST    | `notifications/read-all`       | `notifications.read-all` | mass update des non-lues             |
 
 Routes user-scoped dans le groupe `auth` existant (arbitrage A7 : le notifiable est
 l'utilisateur, la cloche vit dans le header global ; la payload porte `teamSlug` pour le
@@ -107,19 +108,19 @@ pagination `only: ['notifications']`, empty state).
 
 **Lot F — Passe UX** : audit écran par écran, checklist des 7 états du master §20 :
 
-| Écran | loading | success | error | empty | validation | disabled/processing | responsive |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Dashboard | props sync + skeletons DEFER | — | empty states ×4 + CTA | n/a | n/a | CTA gated | KPIs 1→2→4 col, table overflow-x |
-| notifications/Index | paginator | processing read-all | 404 silencieux (scoping back) | illustré | n/a | read-all en vol | header flex-col sous sm |
-| Cloche | aucune requête à l'ouverture | — | navigation prioritaire si PATCH échoue | « Aucune notification » | n/a | read-all processing | max-w viewport, sheet mobile |
-| workflows/Index | sync | toasts ×5 | toasts + repli optimiste | + CTA gated | dialog 422 | switch/dialog busy | auto-fill ≥300px |
-| workflows/Edit | saving | « Enregistré · HH:MM » | error + toasts 422 | hints | JSON inspecteur | Tester/Exécuter | desktop-first assumé, fallback lisible |
-| executions/Index | polling + live | toasts | toasts | filtre vide | n/a | Annuler en vol | filtres empilés, sheet plein écran |
-| templates/Index | processing « Utiliser » | flash | AlertError | ×3 | n/a | boutons gated | auto-fill ≥290px |
-| integrations | testing par carte | toast + reload | métier ET réseau | + CTA gated | live miroir back | Tester en vol | auto-fill ≥280px |
-| teams/settings | reloads | reloads | 422 Form | sections v-if | Form errors | dialogs | lignes wrap (non modifié) |
-| profile/security | status/flash | idem | Form errors | n/a | passwordRules | submits | OK natif |
-| auth/* | n/a | — | AlertError + shake | n/a | par champ | submits | form seule sous 1100px |
+| Écran               | loading                      | success                | error                                  | empty                   | validation       | disabled/processing | responsive                             |
+| ------------------- | ---------------------------- | ---------------------- | -------------------------------------- | ----------------------- | ---------------- | ------------------- | -------------------------------------- |
+| Dashboard           | props sync + skeletons DEFER | —                      | empty states ×4 + CTA                  | n/a                     | n/a              | CTA gated           | KPIs 1→2→4 col, table overflow-x       |
+| notifications/Index | paginator                    | processing read-all    | 404 silencieux (scoping back)          | illustré                | n/a              | read-all en vol     | header flex-col sous sm                |
+| Cloche              | aucune requête à l'ouverture | —                      | navigation prioritaire si PATCH échoue | « Aucune notification » | n/a              | read-all processing | max-w viewport, sheet mobile           |
+| workflows/Index     | sync                         | toasts ×5              | toasts + repli optimiste               | + CTA gated             | dialog 422       | switch/dialog busy  | auto-fill ≥300px                       |
+| workflows/Edit      | saving                       | « Enregistré · HH:MM » | error + toasts 422                     | hints                   | JSON inspecteur  | Tester/Exécuter     | desktop-first assumé, fallback lisible |
+| executions/Index    | polling + live               | toasts                 | toasts                                 | filtre vide             | n/a              | Annuler en vol      | filtres empilés, sheet plein écran     |
+| templates/Index     | processing « Utiliser »      | flash                  | AlertError                             | ×3                      | n/a              | boutons gated       | auto-fill ≥290px                       |
+| integrations        | testing par carte            | toast + reload         | métier ET réseau                       | + CTA gated             | live miroir back | Tester en vol       | auto-fill ≥280px                       |
+| teams/settings      | reloads                      | reloads                | 422 Form                               | sections v-if           | Form errors      | dialogs             | lignes wrap (non modifié)              |
+| profile/security    | status/flash                 | idem                   | Form errors                            | n/a                     | passwordRules    | submits             | OK natif                               |
+| auth/*              | n/a                          | —                      | AlertError + shake                     | n/a                     | par champ        | submits             | form seule sous 1100px                 |
 
 **Trou corrigé : un seul** — entrée « Exécutions » manquante de la sidebar/header (ajoutée,
 icône `Activity`, sans le badge décoratif de la maquette). Tous les écrans P1 géraient déjà

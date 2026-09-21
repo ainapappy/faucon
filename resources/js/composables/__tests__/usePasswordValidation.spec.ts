@@ -39,8 +39,12 @@ describe('usePasswordStrength', () => {
     });
 
     it('exige chiffre ET symbole pour le quatrième critère', () => {
-        expect(usePasswordStrength(ref('Abcdefghij1')).strength.value.score).toBe(2);
-        expect(usePasswordStrength(ref('Abcdefghij!')).strength.value.score).toBe(2);
+        expect(
+            usePasswordStrength(ref('Abcdefghij1')).strength.value.score,
+        ).toBe(2);
+        expect(
+            usePasswordStrength(ref('Abcdefghij!')).strength.value.score,
+        ).toBe(2);
     });
 
     it('suit la saisie : la jauge est réactive', () => {
