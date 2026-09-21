@@ -132,3 +132,30 @@ test('it does not resolve wild segments such as stars or paths past a scalar', f
         ->and($interpolator->resolve($variables, 'items.*'))->toBeNull()
         ->and($interpolator->resolve($variables, 'items.0.id.extra'))->toBeNull();
 });
+
+test('interpolate renders an integer zero inline instead of an empty string', function () {
+    $rendered = (new Interpolator)->interpolate(['score' => 0], 'Score : {{ score }}');
+
+    expect($rendered)->toBe('Score : 0');
+});
+
+test('value returns the integer zero untouched for a single placeholder', function () {
+    $value = (new Interpolator)->value(['trigger' => ['score' => 0]], '{{ trigger.score }}');
+
+    expect($value)->toBe(0);
+});
+
+test('interpolate renders an empty template as an empty string', function () {
+    $rendered = (new Interpolator)->interpolate(['x' => 'value'], '');
+
+    expect($rendered)->toBe('');
+});
+
+test('interpolate renders placeholders surrounded by unicode and emoji', function () {
+    $rendered = (new Interpolator)->interpolate(
+        ['contact' => ['email' => 'client@example.com']],
+        '📧 Contact 🚀 {{ contact.email }} — fin ✅',
+    );
+
+    expect($rendered)->toBe('📧 Contact 🚀 client@example.com — fin ✅');
+});

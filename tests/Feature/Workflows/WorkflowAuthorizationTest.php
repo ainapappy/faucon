@@ -54,6 +54,25 @@ test('a member of the current team gets 404 on the id of another team workflow',
         ->assertNotFound();
 });
 
+test('an unknown workflow id gets 404 on the builder, the metadata update and the delete', function () {
+    [$user, $team] = teamWithMember();
+
+    $this
+        ->actingAs($user)
+        ->get(route('workflows.edit', ['current_team' => $team->slug, 'workflow' => 999999]))
+        ->assertNotFound();
+
+    $this
+        ->actingAs($user)
+        ->patchJson(route('workflows.update', ['current_team' => $team->slug, 'workflow' => 999999]), ['name' => 'Titre'])
+        ->assertNotFound();
+
+    $this
+        ->actingAs($user)
+        ->deleteJson(route('workflows.destroy', ['current_team' => $team->slug, 'workflow' => 999999]))
+        ->assertNotFound();
+});
+
 test('a member can save the graph but can not delete the workflow', function () {
     [$owner, $team] = teamWithMember(TeamRole::Owner);
     $member = User::factory()->create();

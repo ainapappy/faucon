@@ -105,6 +105,24 @@ test('a workflow without any trigger returns 200 with a failed result', function
         ->and($payload['errors'][0]['nodeKey'])->toBeNull();
 });
 
+test('a workflow without any node returns 200 with a failed result', function () {
+    [$user, $team] = teamWithMember();
+    // A fresh factory workflow: 0 node, 0 edge.
+    $workflow = Workflow::factory()->for($team)->create();
+
+    $response = $this->actingAs($user)
+        ->postJson(route('workflows.test-run', ['current_team' => $team->slug, 'workflow' => $workflow->id]));
+
+    $response->assertOk();
+
+    $payload = $response->json();
+
+    expect($payload['status'])->toBe('failed')
+        ->and($payload['nodes'])->toBe([])
+        ->and($payload['errors'][0]['reason'])->toBe('no_trigger')
+        ->and($payload['errors'][0]['nodeKey'])->toBeNull();
+});
+
 test('a workflow containing a handlerless type returns 200 with handler_missing', function () {
     [$user, $team] = teamWithMember();
     $workflow = Workflow::factory()->for($team)->create();

@@ -97,7 +97,7 @@ cohérent et committable.
 | 9   | Templates                       | Templates système / équipe, duplication, publication, galerie              |   ✅   |
 | 10  | Dashboard & UX                  | KPIs, notifications in-app, passe UX et responsive                         |   ✅   |
 | 11  | Sécurité & durcissement         | Audit complet : autorisation, SSRF, rate limiting, XSS, secrets            |   ✅   |
-| 12  | Tests                           | Couverture des zones critiques, edge cases, tests d'intégration            |   ⏳   |
+| 12  | Tests                           | Couverture des zones critiques, edge cases, tests d'intégration            |   ✅   |
 | 13  | Optimisation & qualité          | N+1, payloads Inertia, code-splitting, mesures avant / après               |   ⏳   |
 | 14  | Documentation & finalisation    | docs/, guides d'extension, exemples, nettoyage                             |   ⏳   |
 

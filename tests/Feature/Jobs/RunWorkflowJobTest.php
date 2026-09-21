@@ -164,6 +164,33 @@ test('a retryable failure with no attempt left persists failed definitively', fu
     Event::assertDispatchedTimes(WorkflowExecutionFailed::class, 1);
 });
 
+test('an empty graph fails the queued run with the no_trigger reason', function () {
+    Event::fake([WorkflowExecutionFailed::class]);
+
+    // An active workflow whose graph was emptied: 0 node, 0 edge.
+    $workflow = Workflow::factory()->active()->create();
+    $execution = WorkflowExecution::factory()->for($workflow)->create();
+
+    runJobNow($execution);
+    $execution->refresh();
+
+    expect($execution->status)->toBe(ExecutionStatus::Failed)
+        ->and($execution->error['reason'])->toBe('no_trigger')
+        ->and($execution->error['nodeKey'])->toBeNull()
+        ->and($execution->result['status'])->toBe('failed')
+        ->and($execution->result['errors'][0]['reason'])->toBe('no_trigger')
+        ->and($execution->attempt)->toBe(1);
+
+    $events = $execution->logs()->where('kind', 'event')->orderBy('id')->get();
+
+    expect($events->pluck('message')->all())->toBe([
+        'Exécution démarrée (déclencheur : Manuel).',
+        'Exécution échouée : Le workflow doit contenir exactement un node déclencheur.',
+    ]);
+
+    Event::assertDispatchedTimes(WorkflowExecutionFailed::class, 1);
+});
+
 test('a flag set before the run cancels the execution without running it', function () {
     Event::fake([WorkflowExecutionStarted::class, WorkflowExecutionCompleted::class]);
 
@@ -390,6 +417,65 @@ test('a retry keeps the first-attempt rows and writes the retry journal line', f
         ])
         ->and($events->last()->level)->toBe(ExecutionLogLevel::Info)
         ->and($execution->result)->toBeNull();
+});
+
+test('a released retry completes the execution on the second attempt', function () {
+    Event::fake([WorkflowExecutionStarted::class, WorkflowExecutionCompleted::class, WorkflowExecutionFailed::class]);
+
+    // Attempt 1 hits a transient network failure, attempt 2 succeeds.
+    Http::fake([
+        'https://203.0.113.10/*' => Http::sequence()
+            ->pushFailedConnection('net down')
+            ->push(['ok' => true], 200),
+    ]);
+
+    $execution = WorkflowExecution::factory()->for(jobHttpWorkflow())->create();
+
+    // Attempt 1: the job releases itself (backoff 30 s, tries = 2).
+    $first = new RunWorkflowJob($execution->id);
+
+    $firstAttempt = Mockery::mock(Job::class);
+    $firstAttempt->shouldReceive('attempts')->andReturn(1);
+    $firstAttempt->shouldReceive('release')->once()->with(30);
+
+    $first->setJob($firstAttempt);
+    $first->handle(app(WorkflowRunner::class), app(WorkflowGraphMapper::class), app(ExecutionLogWriter::class));
+
+    // Attempt 2: the released job runs again, this time the HTTP call succeeds.
+    $second = new RunWorkflowJob($execution->id);
+
+    $secondAttempt = Mockery::mock(Job::class);
+    $secondAttempt->shouldReceive('attempts')->andReturn(2);
+    $secondAttempt->shouldReceive('release')->never();
+
+    $second->setJob($secondAttempt);
+    $second->handle(app(WorkflowRunner::class), app(WorkflowGraphMapper::class), app(ExecutionLogWriter::class));
+
+    $execution->refresh();
+
+    expect($execution->status)->toBe(ExecutionStatus::Completed)
+        ->and($execution->attempt)->toBe(2)
+        ->and($execution->error)->toBeNull()
+        ->and($execution->result['status'])->toBe('completed')
+        ->and(array_column($execution->result['nodes'], 'nodeKey'))->toBe(['t', 'h', 'o'])
+        ->and($execution->started_at)->not->toBeNull()
+        ->and($execution->finished_at)->not->toBeNull();
+
+    $events = $execution->logs()->where('kind', 'event')->orderBy('id')->get();
+    $attemptRows = $execution->logs()->where('kind', 'node')->orderBy('id')->get()->groupBy('attempt');
+
+    expect($events->pluck('message')->all())->toBe([
+        'Exécution démarrée (déclencheur : Manuel).',
+        'Retry programmé (tentative 2/2 dans 30 s).',
+        'Exécution démarrée (déclencheur : Manuel).',
+        'Exécution terminée avec succès.',
+    ])
+        ->and($attemptRows[1]->pluck('status', 'node_key')->sortKeys()->all())->toBe(['h' => 'error', 'o' => 'skipped', 't' => 'ok'])
+        ->and($attemptRows[2]->pluck('status', 'node_key')->sortKeys()->all())->toBe(['h' => 'ok', 'o' => 'ok', 't' => 'ok']);
+
+    Event::assertDispatchedTimes(WorkflowExecutionStarted::class, 2);
+    Event::assertDispatched(WorkflowExecutionCompleted::class);
+    Event::assertNotDispatched(WorkflowExecutionFailed::class);
 });
 
 test('an inactive workflow writes only the failure journal line', function () {

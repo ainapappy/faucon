@@ -155,6 +155,31 @@ test('an invalid first answer is retried once with a format reminder', function 
         ->and($captured[1]->systemPrompt)->toContain('RAPPEL');
 });
 
+test('a truncated JSON answer is treated as invalid and retried once with the reminder', function () {
+    $captured = [];
+    $completer = completerReplaying([
+        structuredAiResponse('{"label": "spe'),
+        structuredAiResponse('{"label":"lead"}'),
+    ], $captured);
+
+    $request = new AiRequest(
+        provider: 'fake',
+        model: 'demo',
+        systemPrompt: 'Tu classes.',
+        userPrompt: 'Contenu.',
+        temperature: 0.5,
+        maxTokens: 512,
+        jsonSchema: ['label' => 'enum:lead,spam'],
+        timeoutSeconds: 30,
+    );
+
+    $response = $completer->complete($request);
+
+    expect($response->structured)->toBe(['label' => 'lead'])
+        ->and(count($captured))->toBe(2)
+        ->and($captured[1]->systemPrompt)->toContain('RAPPEL');
+});
+
 test('two invalid answers throw a structured output exception without leaking the payload', function () {
     $captured = [];
     $completer = completerReplaying([

@@ -190,3 +190,13 @@ test('a deep link to another team execution leaks nothing', function () {
         ->assertInertia(fn ($page) => $page
             ->where('execution', null));
 });
+
+test('a deep link to an unknown execution id selects nothing', function () {
+    [$user, $team] = teamWithMember();
+
+    openExecutions($user, $team, ['execution' => 999999])
+        ->assertInertia(fn ($page) => $page
+            ->where('execution', null)
+            // The history itself stays fully served.
+            ->has('executions.data'));
+});

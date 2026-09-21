@@ -11,6 +11,7 @@ use App\Services\Workflow\NodeHandler;
 use App\Services\Workflow\NodeHandlerRegistry;
 use App\Services\Workflow\WorkflowRunner;
 use App\Services\Workflow\WorkflowValidator;
+use RuntimeException;
 
 /**
  * Fresh registry with the five real handlers plus the test-local echo handler.
@@ -76,6 +77,27 @@ final class EchoHandlerForRunnerTest implements NodeHandler
     public function execute(NodeContext $context): NodeResult
     {
         return NodeResult::passthrough($context);
+    }
+}
+
+/**
+ * Test-local handler that crashes with an unexpected Throwable.
+ */
+final class BoomHandlerForRunnerTest implements NodeHandler
+{
+    public function type(): string
+    {
+        return 'test.boom';
+    }
+
+    public function validate(array $config): array
+    {
+        return [];
+    }
+
+    public function execute(NodeContext $context): NodeResult
+    {
+        throw new RuntimeException('classified-secret: disk full on /dev/null');
     }
 }
 
@@ -231,6 +253,32 @@ test('a failing node stops the run with an explicit error and skips the rest', f
         ->and($result->nodes[2]->status)->toBe('skipped')
         ->and(count($result->errors))->toBe(1)
         ->and($result->errors[0])->toBe($result->nodes[1]->error);
+});
+
+test('an unexpected handler crash is contained as an exception error without leaking its message', function () {
+    $nodes = [
+        runNode('n1', 'trigger.manual'),
+        runNode('n2', 'test.boom'),
+        runNode('n3', 'data.transform', ['expression' => '{{ trigger.marker }}']),
+    ];
+    $edges = [runEdge('n1', 'n2', 'out'), runEdge('n2', 'n3', 'out')];
+    $registry = runnerRegistry(withEcho: false);
+    $registry->register(new BoomHandlerForRunnerTest);
+    $runner = new WorkflowRunner(new WorkflowValidator($registry), $registry);
+
+    $result = $runner->run($nodes, $edges, ['marker' => 'x']);
+
+    // The safety net reports the throwable and answers with a generic
+    // business message — the raw exception detail never reaches the run.
+    expect($result->status)->toBe('failed')
+        ->and($result->nodes[0]->status)->toBe('ok')
+        ->and($result->nodes[1]->status)->toBe('error')
+        ->and($result->nodes[1]->error?->reason)->toBe('exception')
+        ->and($result->nodes[1]->error?->message)
+        ->toBe('Une erreur interne est survenue dans le node « Node n2 ».')
+        ->and($result->nodes[1]->error?->message)->not->toContain('classified-secret')
+        ->and($result->nodes[2]->status)->toBe('skipped')
+        ->and(count($result->errors))->toBe(1);
 });
 
 test('an exhausted clock budget fails the run with a timeout error', function () {
