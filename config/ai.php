@@ -27,7 +27,7 @@ return [
     'providers' => [
         'fake' => [
             'enabled' => true,
-            'models' => ['demo'],
+            'models' => ['demo', 'demo1', 'demo3', 'demo4'],
         ],
         'openai' => [
             'enabled' => filled(env('OPENAI_API_KEY')),
