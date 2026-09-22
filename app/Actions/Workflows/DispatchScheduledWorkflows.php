@@ -29,8 +29,8 @@ class DispatchScheduledWorkflows
 
         Workflow::query()
             ->where('status', WorkflowStatus::Active->value)
-            ->whereHas('nodes', fn ($query) => $query->where('type', 'trigger.schedule'))
-            ->with(['nodes' => fn ($query) => $query->where('type', 'trigger.schedule')])
+            ->whereHas('nodes', fn($query) => $query->where('type', 'trigger.schedule'))
+            ->with(['nodes' => fn($query) => $query->where('type', 'trigger.schedule')])
             ->each(function (Workflow $workflow) use (&$dispatched): void {
                 try {
                     $node = $workflow->nodes->first();
@@ -45,9 +45,6 @@ class DispatchScheduledWorkflows
 
                     $dispatched++;
                 } catch (ValidationException) {
-                    // A business refusal (exhausted team ai budget, S10) is
-                    // expected — skip this run silently and keep dispatching
-                    // the remaining workflows.
                     return;
                 } catch (Throwable $exception) {
                     report($exception);
